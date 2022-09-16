@@ -1,5 +1,7 @@
 # A Bybit Scalper Tool
 
+![example](./readme_gif/gif_ticker_atp.gif)
+
 ## Wat iz it ?
 I built this little piece of code so we can finally do like the big boys on binance and exit our 0.2 ETH position with 2 scale orders.
 
@@ -9,6 +11,8 @@ It's my first time building something in python so please don't insult me on twi
 
 
 ## Features
+
+![example](./readme_gif/gif_scale_cancel.gif)
 
 - scale order (reduce only, used as TP)
 - cancel orders
