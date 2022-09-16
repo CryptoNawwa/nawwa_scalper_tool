@@ -1,4 +1,13 @@
 {
-    "sl1": "scale 2 0.05 0.10",
-    "sl2": "scale 4 0.1 0.15"
+    "tp1": "scale 4 0.1 0.2",
+    "tp2": "scale 4 0.15 0.25",
+    "tp3": "scale 4 0.2 0.3",
+    "tp4": "scale 2 0.1 0.2",
+    "tp5": "scale 2 0.15 0.25",
+    "tp6": "scale 2 0.20 0.30",
+    "cc": "cancel all",
+    "atp4": "atp ON tp4",
+    "atom" : "t atomusdt",
+    "eth" : "t ethusdt",
+    "etc" : "t etcusdt"
 }
