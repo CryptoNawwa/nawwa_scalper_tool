@@ -149,7 +149,9 @@ class BybitScalperFront(App):
         
         # Print client debug array in file
         if len(self.client.debug_log) > 0:
-            self.log(f'Debug: { self.client.debug_log}')
+            for x in self.client.debug_log:
+                self.log(x)
+            self.client.debug_log = []
             
         ## Update terminal title 
         self.__handle_terminal_title_info()

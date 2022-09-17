@@ -75,6 +75,14 @@ class BybitClient():
                 raise ValueError(f"Missing data to create autotp for {ticker}")
             
             number_of_orders = self.auto_tp_data["number_of_orders"]
+            
+            try: 
+                # cancel active orders
+                self.http_client.cancel_all_active_orders(symbol=ticker)
+            except Exception as z:
+                print("No active orders")
+            
+            
             success, msg = self.__wrap_place_scale_orders(
                 [new_position], 
                 ticker, 
@@ -89,34 +97,43 @@ class BybitClient():
             self.debug_log.append(str(e))
         
     def __handle_position_stream(self, msg):
+        
         """ Called everytime we get into a position """
         raw_data: List[Dict] = Dict(msg).get("data")
         
         if raw_data == None:
             return 
         
+        a = raw_data.copy()
+        
         # filter out closed position (bybit call this event when we close a position, with a size of 0 lol)
         open_position_list = list(filter(lambda position: position["size"] > 0.0, raw_data))
         
+     
         # save previous position
         previous_positions = self.current_positions if self.current_positions != None else []
         
         # set current positon to new positions
         self.current_positions = open_position_list
         
+        # return if no auto tp needed
+        if self.auto_tp_status == False:
+            return 
+        
         # save new position by looking a prev ones
-        new_position: Dict = {}
+        new_positions: Dict = {}
         for pos in self.current_positions:
             existing_pos = next((x for x in previous_positions if x["symbol"] == pos["symbol"]), None)
-            if existing_pos == None:
-                new_position = pos
-                break
-
+            if (existing_pos == None) or (float(pos["size"]) > float(existing_pos["size"])):
+                new_positions[pos["symbol"]] = pos
+                
+        
+        new_positions_list = new_positions.items()
         # if atp is ON and new position was found
-        if self.auto_tp_status == True and new_position != {}:
-            self.__handle_auto_tp_system(new_position)
-            
-            
+        for new_pos in new_positions_list:
+            self.__handle_auto_tp_system(Dict(new_pos[1]))
+        
+        
     def __init_listen_position(self):
         """ Call __handle_position_stream everytime we get into a position """
         self.websocket_auth_client.position_stream(self.__handle_position_stream)
