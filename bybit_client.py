@@ -1,7 +1,10 @@
-import math
-from typing import List, Tuple, Callable
+
+from typing import List, Tuple
+from tools import build_scale_orders
 from config import Configuration, Dict
 from pybit import usdt_perpetual
+
+SUCCESS_RETURN = "OK"
 
 class BybitClient():
 
@@ -62,13 +65,12 @@ class BybitClient():
         if data and data["symbol"] == self.ticker:
             self.latest_symbol_info = data
     
-    
     def __handle_auto_tp_system(self, new_position: Dict):
         """ Will get the position info and shortcuts cmd and set the appropriate scale orders"""
         try:
             ticker = new_position["symbol"]
-            ticker_info = next(info for info in self.symbols 
-                                            if info["name"] == ticker)
+            ticker_info = next((info for info in self.symbols 
+                                            if info["name"] == ticker), None)
 
 
             if (ticker == None) or (ticker_info == None) or (self.auto_tp_data == None):
@@ -82,14 +84,13 @@ class BybitClient():
             except Exception as z:
                 print("No active orders")
             
-            
-            success, msg = self.__wrap_place_scale_orders(
+            # build & send scale orders based on shortcut in auto_tp_data
+            success, msg = self.__send_scale_orders(build_scale_orders(
                 [new_position], 
-                ticker, 
                 ticker_info, 
                 number_of_orders, 
                 self.auto_tp_data["scale_from"], 
-                self.auto_tp_data["scale_to"])
+                self.auto_tp_data["scale_to"]))
         
             if success == False:
                 raise Exception(msg)
@@ -129,18 +130,13 @@ class BybitClient():
                 
         
         new_positions_list = new_positions.items()
-        # if atp is ON and new position was found
+        # if atp is ON and new position were found
         for new_pos in new_positions_list:
             self.__handle_auto_tp_system(Dict(new_pos[1]))
-        
-        
+          
     def __init_listen_position(self):
         """ Call __handle_position_stream everytime we get into a position """
         self.websocket_auth_client.position_stream(self.__handle_position_stream)
-        
-    def __round_to_tick(self, value: float, tick_size: float) -> float:
-        """ Round a value to the next tick """
-        return math.ceil(value / tick_size) * tick_size
     
     def __ensure_http_result(self, http_result) -> Dict:
         """ Take HTTP response and throw appropriate error """
@@ -176,97 +172,38 @@ class BybitClient():
             # connect to price feed
             self.websocket_no_auth_client.instrument_info_stream(self.__handle_instrument_info_stream, self.ticker)
             
-            return True, "OK"
+            return True, SUCCESS_RETURN
         except Exception as e:
             self.ticker = None
             self.ticker_info = None
             return False, str(e)
-         
-    def __wrap_place_scale_orders(self, 
-            current_positions: List[Dict], 
-            ticker: str,
-            ticker_info: Dict | None,
-            number_of_orders: int,
-            scale_from: float,
-            scale_to: float) -> Tuple[bool, str]:
-        """
-            Wrapped to be able to call this func with different param from "self"
-        """
-        try:
-            if current_positions == None:
-                raise ValueError("You don't have any positon oppened")
-            
-            current_position_data = next(pos for pos in current_positions 
-                                         if pos["symbol"] == ticker and pos["size"] > 0.0)
-                        
-            if current_position_data == None:
-                raise ValueError("No current position found")
-            
-            if ticker_info == None:
-                raise ValueError("Cannot find ticker info") 
-        
-            ticker_tick_size = float(ticker_info.get("price_filter")["tick_size"])
-            ticker_price_scale = int(ticker_info.get("price_scale"))
-            
-            min_trad_quant = float(ticker_info["lot_size_filter"]["min_trading_qty"])
-            max_trad_quant = float(ticker_info["lot_size_filter"]["post_only_max_trading_qty"])
-            
-            side = str(current_position_data.get("side"))
-            entry_price = float(current_position_data.get("entry_price"))
-            pos_size = float(current_position_data.get("size"))
-            
-            entry_to_percent = (entry_price / 100)
-            
-            from_value = entry_to_percent * scale_from
-            from_price = entry_price + from_value if side == "Buy" else entry_price - from_value
-            
-            to_value = entry_to_percent * scale_to
-            to_price = entry_price + to_value if side == "Buy" else entry_price - to_value
-            
-            steps = (to_price - from_price) / number_of_orders
-            
-            amount_per_order = pos_size / number_of_orders
-            
-            if amount_per_order < min_trad_quant:
-                raise ValueError(f"Position size too small for the scaling, min order size : {min_trad_quant}")
-            elif amount_per_order > max_trad_quant:
-                raise ValueError(f"Scaling too small for the positon size : max pos size per limit order : {max_trad_quant}")
-            
-            acc = 0
-            i = 1
-            price_raw = 0
-            http_result_msg: list[Dict] = []
-            while i <= number_of_orders:
-                price_raw = from_price + acc
-                calculated_price = round(self.__round_to_tick(price_raw, ticker_tick_size), ticker_price_scale)
-                result = self.http_client.place_active_order(
-                    symbol=ticker,
-                    side="Buy" if side == "Sell" else "Sell",
-                    order_type="Limit",
-                    qty=amount_per_order,
-                    price=calculated_price,
-                    time_in_force="PostOnly",
-                    reduce_only=True,
-                    close_on_trigger=False,
-                    position_idx = 0
-                )
-                http_result_msg.append(self.__ensure_http_result(result))
-                acc = acc + steps
-                i = i + 1
-            
-            
-            return True, http_result_msg[0]["ret_msg"]
-        except Exception as e:
-            print("Error in place_scale_orders", str(e))
-            return False, str(e)
+    
+    def __send_scale_orders(self, orders: list[Dict]) -> Tuple[bool, str]:
+        """ Will call API and send scale orders """
+        for order in orders:
+            self.http_client.place_active_order(
+                symbol = str(order["symbol"]),
+                side = str(order["side"]),
+                order_type = str(order["order_type"]),
+                qty = float(order["qty"]),
+                price = float(order["price"]),
+                time_in_force = str(order["time_in_force"]),
+                reduce_only = bool(order["reduce_only"]),
+                close_on_trigger = bool(order["close_on_trigger"]),
+                position_idx = int(order["position_idx"])
+            )
+        return True, SUCCESS_RETURN
         
     def place_scale_orders(self, number_of_orders: int, scale_from: float, scale_to: float) -> Tuple[bool, str]:
-        """ 
-            Place multiple orders based on parameters 
-            Use the wrapper func instead of using "self" bcs I want to use the code logic elswhere
-        """
-        return self.__wrap_place_scale_orders(self.current_positions, self.ticker, self.ticker_info, number_of_orders, scale_from, scale_to)
-    
+        """ Place multiple orders based on parameters  """
+        try:
+            orders = build_scale_orders(self.current_positions, self.ticker_info, number_of_orders, scale_from, scale_to)
+            self.debug_log.append(orders)
+            return self.__send_scale_orders(orders)
+        except Exception as e:
+            print("Error in place_scale_orders", str(e))
+            return False, str(e)  
+     
     def cancel_all_orders(self) -> Tuple[bool, str, int]:
         """ Will cancel all limit orders for current ticker """
         try:
@@ -278,7 +215,7 @@ class BybitClient():
             dict_result = self.__ensure_http_result(result)
             
             if dict_result["result"] == None:
-                return True, "OK", 0
+                return True, SUCCESS_RETURN, 0
             
             number_of_order_cancelled = len(dict_result["result"])
             

@@ -1,4 +1,5 @@
-import time
+
+
 from textual.app import App
 from rich.panel import Panel
 from textual.widgets import Header, Footer
@@ -10,6 +11,7 @@ from textual.widget import Widget, Reactive
 from rich.console import RenderableType
 from rich.align import Align
 
+from tools import remove_space_and_split
 from bybit_client import BybitClient
 from config import ConfigUpdateForm, Configuration, Dict
 
@@ -23,18 +25,20 @@ SHORTCUT_PATH = os.path.join(os.path.dirname(__file__), 'data/shortcuts.json')
 DEFAULT_TERM_TITLE = "Terminal [white]-[/white] [No ticker selected]"
 SHORTCUTS_SIDEBAR_SIZE = 80
 
+
+
 class ShortCutSideBar(Widget):
     """Display shortcuts sidebar """
 
-    def __init__(self, *,  name: str | None = None, height: int | None = None) -> None:
+    def __init__(self, *, name: str | None = None,  shortcut_cfg : Configuration, height: int | None = None) -> None:
         super().__init__(name=name)
-        self.config = Configuration(SHORTCUT_PATH, live=False)
-        self.log(str(self.config.data))
+        self.shortcuts_cfg = shortcut_cfg
+        self.log(str(self.shortcuts_cfg.data))
 
     def render(self) -> RenderableType:
         self.shortcuts = ""
-        for f in self.config.data:
-            self.shortcuts +=  f"[bold magenta]{str(f)}[/] --> [blue]{self.config.data[f]}[/]\n"
+        for f in self.shortcuts_cfg.data:
+            self.shortcuts +=  f"[bold magenta]{str(f)}[/] --> [blue]{self.shortcuts_cfg.data[f]}[/]\n"
             
         return Panel(
             Align.left(self.shortcuts),
@@ -45,7 +49,7 @@ class ShortCutSideBar(Widget):
 class BybitScalperFront(App):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.shortcuts = Configuration(SHORTCUT_PATH, live=False)
+        self.shortcuts_cfg = Configuration(SHORTCUT_PATH, live=True)
         self.client = BybitClient(CONFIG_PATH)
         self.display_title = 'ScalBit'
 
@@ -69,7 +73,7 @@ class BybitScalperFront(App):
         self.history_view = ListViewUo([])
         self.footer = Footer()
         self.header = Header(style="white")
-        self.shortcuts_sidebar = ShortCutSideBar(name="Shortcuts")
+        self.shortcuts_sidebar = ShortCutSideBar(name="Shortcuts", shortcut_cfg = self.shortcuts_cfg)
         self.shortcuts_sidebar.layout_offset_x = -SHORTCUTS_SIDEBAR_SIZE
 
         # add widgets to dock
@@ -170,16 +174,10 @@ class BybitScalperFront(App):
         if scale_from <= 0.0 or scale_to <= 0.0 or scale_from >= scale_to or number_of_orders <= 0:
             raise ValueError("Wrong data for scale order")
         return number_of_orders, scale_from, scale_to
-    
-    def __remove_space_and_split(self, string: str) -> list[str]:
-       return " ".join(string.split()).split(" ")
    
     def __get_shortcut_from_cmd(self, cmd: str) -> str | None:
-        for f in self.shortcuts.data:
-            if (str(f) == cmd):
-                return self.shortcuts.data[f]
-        return None
-    
+        return self.shortcuts_cfg.data.get(cmd, None)
+     
     async def add_text_to_history_list(self, cmd: str, result: str | None) -> None:
         """Add text to the history list on the UI"""
         
@@ -202,11 +200,9 @@ class BybitScalperFront(App):
             if not new_ticker.find("USDT"):
                 raise ValueError("Only accept USDT ticker")
             
-            # Call bybit client
+            # Call bybit client to switch ticker
             success, msg = self.client.switch_ticker(new_ticker)
-            
-            self.log(f'switch_ticker for "{new_ticker}" -> {success}')
-        
+                    
             if success == True:
                 await self.add_text_to_history_list(raw_cmd, f"Successfully switched ticker to {new_ticker}")
             else:
@@ -221,12 +217,12 @@ class BybitScalperFront(App):
             if len(cmd_list) != 2:
                 raise ValueError("Wrong syntax")
             
-            to_cancel = str.upper(cmd_list[1])
+            to_cancel = cmd_list[1]
 
             success: bool
             msg: str
             nb_of_order: int
-            match to_cancel:
+            match str.upper(to_cancel):
                 case "ALL":
                     success, msg, nb_of_order = self.client.cancel_all_orders()
                 case _:
@@ -246,13 +242,10 @@ class BybitScalperFront(App):
         try:
             if len(cmd_list) < 2:
                 raise ValueError("Wrong syntax")
-            
-            ## atp UP SL2
-            ## atp ON sl1
-            ## atp OFF
+    
             atp_type = str.upper(cmd_list[1])
             
-            # errors
+            # Guards
             if atp_type == "ON" and len(cmd_list) < 3:
                 raise ValueError("Cannot set autotp to ON without a following shortcut")
             elif atp_type == "OFF":
@@ -261,7 +254,7 @@ class BybitScalperFront(App):
                 await self.add_text_to_history_list(raw_cmd, f"Auto take profit is now {atp_type}")
                 return
             elif atp_type == "STATUS" or atp_type == "ST":
-                status = "ON" if self.client.auto_tp_status == True else "OFF" 
+                status = "ON" if self.client.auto_tp_status == True else "OFF"
                 await self.add_text_to_history_list(raw_cmd, f"Auto take profit status is [{status}]")
                 return
             
@@ -272,7 +265,7 @@ class BybitScalperFront(App):
             atp_scale_cmd = self.__get_shortcut_from_cmd(atp_scale_shortcut)
             if atp_scale_cmd == None:
                 raise ValueError(f"Cannot find shortcut {atp_scale_shortcut}")
-            atp_scale_cmd_list = self.__remove_space_and_split(atp_scale_cmd)
+            atp_scale_cmd_list = remove_space_and_split(atp_scale_cmd)
             
             # ensure the shortcut is a scale shortcut
             if atp_scale_cmd_list[0] != "scale" and atp_scale_cmd_list[0] != "s":
@@ -314,6 +307,31 @@ class BybitScalperFront(App):
             self.log(f'Error in cmd_scale_limit_order : {str(e)}')
             await self.add_text_to_history_list(raw_cmd, str(e))
     
+    async def cmd_manage_shortcuts(self, raw_cmd: str, cmd_list: List[str]) -> None:
+        if len(cmd_list) < 3:
+            raise ValueError("Wrong syntax, ex: shortcut add/del/up btc ticker btcusdt")
+        
+        shortcut_action = str.upper(cmd_list[1])
+        shortcut_name = cmd_list[2]
+        
+        match shortcut_action:
+            case "ADD" | "UPDATE" | "UP":
+                shortcut_value = " ".join(cmd_list[3:])
+                success = self.shortcuts_cfg.add(shortcut_name, shortcut_value)
+                if success:
+                    await self.add_text_to_history_list(raw_cmd, f"Shortcut {shortcut_name} is now {shortcut_value}")
+                    return
+            case "DEL":
+                success = self.shortcuts_cfg.delete(shortcut_name)
+                if success:
+                    await self.add_text_to_history_list(raw_cmd, f"Shortcut {shortcut_name} was deleted")
+                    return
+            case _:
+                await self.add_text_to_history_list(raw_cmd, f"Shortcut action {shortcut_action} not supported")
+                return
+            
+        await self.add_text_to_history_list(raw_cmd, f"Could not perform {shortcut_action} on {shortcut_name} ")
+    
     async def execute_terminal_cmd(self, raw_cmd, cmd_list: List[str]) -> None:
         """ Will try to execute cmd """
         first_command = cmd_list[0]
@@ -326,11 +344,15 @@ class BybitScalperFront(App):
                 await self.cmd_cancel_orders(raw_cmd, cmd_list)
             case "autotp" | "atp":
                 await self.cmd_auto_tp(raw_cmd, cmd_list)
+            case "shortcut" | "sc":
+                await self.cmd_manage_shortcuts(raw_cmd, cmd_list)
+            case "quit":
+                await self.app.action_quit()
             case _:
                 await self.add_text_to_history_list(first_command, None)
                            
     async def action_submit(self) -> None:
-        """Command input submit event"""
+        """ Command input submit event """
         with self.console.status("Talking with Bybit.."):
             # set cmd & shortcut
             cmd = self.terminal_cmd.value
@@ -338,10 +360,11 @@ class BybitScalperFront(App):
             
             # use cmd or shortcut
             to_execute = shortcut if shortcut != None else cmd
+            
             self.log(f'cmd to execute "{to_execute}"')
             
             # trim space & split cmd by space & send it
-            to_execute_list = self.__remove_space_and_split(to_execute)
+            to_execute_list = remove_space_and_split(to_execute)
             
             await self.execute_terminal_cmd(to_execute, to_execute_list)
             
