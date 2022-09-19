@@ -8,10 +8,8 @@ This CLI made because our friend [Ichibot](https://gitlab.com/Ichimikichiki/ichi
 The current version of the NawwaBot only support the **Bybit** exchange but the code was made in a way that's easy for any developer to implement a new exchange
 ## Demo
 
-![example](./readme_gif/gif_ticker_atp.gif)
-
-![example](./readme_gif/gif_scale_cancel.gif)
-
+Smol demo 
+[![asciicast](https://asciinema.org/a/gXh5ocBOkqe3e5L5JvR59bdUn.svg)](https://asciinema.org/a/gXh5ocBOkqe3e5L5JvR59bdUn)
 
 ## Run Locally
 
@@ -81,7 +79,7 @@ Run the CLI using this command
 
 ## Shortcuts
 
-To add / remove shortcuts, open the `shortcuts.json` file located in `shortcuts/shortcuts.json` and modify it to your needs.
+To add / remove shortcuts, open the `shortcuts.json` file located in `app/shortcuts/shortcuts.json` and modify it to your needs.
 
 Shortcut file syntax is :
 ```json
@@ -233,7 +231,7 @@ Actions availabe :
 
 Autotp (for automatic take profit) system will automatically set reduce-only orders based on the shortcut config you gave him.  
 
-:warning: It runs for **ALL THE COIN**, even if you switch active ticker it will run the system, it's not related to the current active ticker (might change that later if it's a problem)
+:warning: Once it's ON, the autotp system works for all the positions you enter, on every ticker. It means that if you take a trade on another pair, it will place the scale orders, it's not related to the current active ticker (might change that later if it's a problem)
 
 ### **ON** example
 ```sh
