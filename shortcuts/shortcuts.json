@@ -11,5 +11,7 @@
     "eth": "t ethusdt",
     "etc": "t etcusdt",
     "btc": "ticker btcusdt",
-    "eos": "ticker eosusdt"
+    "eos": "ticker eosusdt",
+    "tp8": "scale 5 0.1 0.15",
+    "tp9": "scale 2 0.3 0.4"
 }

@@ -1,5 +1,35 @@
 import math
-from typing import Dict
+from exchange.positions_info import Position
+from exchange.symbols_info import Symbol
+from typing import Literal, TypedDict
+
+class ScaleOrder(TypedDict):
+    symbol: str
+    side: Literal["Buy", "Sell"]
+    order_type: str
+    qty: int
+    price: float
+    time_in_force: str
+    reduce_only: bool
+    close_on_trigger: bool
+    position_idx: int
+    
+def ensure_http_result(http_result: dict) -> dict:
+    """ Take HTTP response and throw appropriate error """
+    # ret_code=0 and ext_code="" means create order success
+    # ret_code=0 and ext_code!="" means create order success but some parameters were not set correctly
+    # ret_code !=0 means create order fail
+    # ext_code means please refer to Errors
+    
+    dict_http_result = dict(http_result) 
+    ret_code = int(dict_http_result.get("ret_code"))
+    ext_code = dict_http_result.get("ext_code")
+    
+    if ret_code == 0 and ext_code != "":
+        raise Exception(f"Wrong parameters, code :{ext_code}")
+    if ret_code != 0:
+        raise Exception(f"Bybit API error {ret_code} - {ext_code}")
+    return dict_http_result
 
 def remove_space_and_split(string: str) -> list[str]:
     return " ".join(string.split()).split(" ")
@@ -8,11 +38,11 @@ def round_to_tick(value: float, tick_size: float) -> float:
     return math.ceil(value / tick_size) * tick_size
 
 def build_scale_orders(
-        current_positions: list[Dict] | None, 
-        ticker_info: Dict | None,
+        current_positions: list[Position] | None, 
+        ticker_info: Symbol,
         number_of_orders: int,
         scale_from: float,
-        scale_to: float) -> list[Dict]:
+        scale_to: float) -> list[ScaleOrder]:
     
     # Safe guards
     if current_positions == None:
@@ -61,7 +91,7 @@ def build_scale_orders(
 
     # Create scale order array
     i = 0
-    orders: list[Dict] = []
+    orders: list[dict] = []
     while i < number_of_orders:
         orders.append({
             "symbol" : ticker_info["name"],
@@ -80,5 +110,5 @@ def build_scale_orders(
     if orders[number_of_orders - 1]["price"] != to_price:
         orders[number_of_orders - 1]["price"] = round(to_price, ticker_price_scale)
             
-    # Return array
+    # Return list of dict
     return orders
