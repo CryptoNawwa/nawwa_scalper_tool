@@ -266,7 +266,7 @@ class Frontend(App):
             if atp_type == "ON" and len(cmd_list) < 3:
                 raise ValueError("Cannot set autotp to ON without a following shortcut")
             elif atp_type == "OFF":
-                self.client.set_auto_tp_data(auto_take_profit_data)
+                self.client.auto_tp_data = auto_take_profit_data
                 await self.add_text_to_history_list(raw_cmd, f"Auto take profit is now {atp_type}")
                 return
             elif atp_type == "STATUS" or atp_type == "ST":
@@ -294,7 +294,7 @@ class Frontend(App):
             auto_take_profit_data["number_of_orders"] = number_of_orders
             auto_take_profit_data["scale_from"] = scale_from
             auto_take_profit_data["scale_to"] = scale_to
-            self.client.set_auto_tp_data(auto_take_profit_data)
+            self.client.auto_tp_data = auto_take_profit_data
 
             if atp_type == "ON":
                 await self.add_text_to_history_list(raw_cmd,

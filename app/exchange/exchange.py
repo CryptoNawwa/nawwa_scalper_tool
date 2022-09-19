@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from typing import Tuple
+from typing import Tuple, cast
 
 from app.exchange.auto_take_profit_data import AutoTakeProfitData
 from app.exchange.scale_order_data import ScaleOrdersData
@@ -9,7 +9,26 @@ from app.exchange.symbol_price_info import SymbolPriceInfo
 
 
 class Exchange(ABC):
-    auto_tp_data: AutoTakeProfitData
+    def __init__(self):
+        self._auto_tp_data: AutoTakeProfitData = cast(AutoTakeProfitData, {
+            "activated": False,
+            "number_of_order": 0,
+            "scale_from": 0.0,
+            "scale_to": 0.0,
+        })
+
+    @property
+    def auto_tp_data(self) -> AutoTakeProfitData:
+        return self._auto_tp_data
+
+    @auto_tp_data.setter
+    def auto_tp_data(self, value: AutoTakeProfitData):
+        self._auto_tp_data = value
+
+    @auto_tp_data.deleter
+    def x(self) -> None:
+        del self._auto_tp_data
+
 
     # Methods for the UI to get info or update data on screen #
     @abstractmethod
@@ -31,10 +50,6 @@ class Exchange(ABC):
     def get_error_log(self, flush: bool = True) -> list | None:
         """ Get debug log array to print in log file"""
         ...
-
-    def set_auto_tp_data(self, auto_tp_data: AutoTakeProfitData) -> None:
-        """ Will be called by UI to set data for auto tp """
-        self.auto_tp_data = auto_tp_data
 
     #  CMD methods #
     @abstractmethod
