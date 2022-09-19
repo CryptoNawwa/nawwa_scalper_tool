@@ -1,11 +1,11 @@
 import os
-from bybit.bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder
-from config import Configuration
-from exchange.symbols_info import SymbolsInfo, Symbol
-from exchange.symbol_price_info import SymbolPriceInfo
-from exchange.positions_info import Position
-from exchange.scale_order_data import ScaleOrdersData
-from exchange.exchange import Exchange
+from app.bybit.bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder
+from app.config import Configuration
+from app.exchange.symbols_info import SymbolsInfo, Symbol
+from app.exchange.symbol_price_info import SymbolPriceInfo
+from app.exchange.positions_info import Position
+from app.exchange.scale_order_data import ScaleOrdersData
+from app.exchange.exchange import Exchange
 from typing import Tuple, cast
 
 from pybit import usdt_perpetual
@@ -13,33 +13,36 @@ from pybit import usdt_perpetual
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'data/conf.json')
 SUCCESS_RETURN = "OK"
 
+
 class Bybit(Exchange):
     def __init__(self) -> None:
         super().__init__()
         self.config = Configuration(CONFIG_PATH)
         self.endpoint = "https://api.bybit.com"
 
-        ## Init class var
+        # Init class var #
         self.active_symbol_name: str | None = None
         self.active_symbol_info: SymbolsInfo | None = None
         self.active_symbol_latest_price: SymbolPriceInfo | None = None
 
         self.current_active_positions: list[Position] | None = None
         self.symbols: list[dict] | None = None
+        
+        self.already_subscribed_symbol_price: list[str] = []
 
-        # Debug array
+        # Debug array #
         self.debug_log = []
 
-        # Create websocket & http handler       
+        # Create websocket & http handler  #
         self._create_ws_no_auth()
         self._create_ws_auth()
         self._create_http_auth()
 
-        ## Call methods
+        #  Call methods #
         self._load_bybit_symbol()
         self._listen_to_position()
 
-    ## Private methods ##
+    # Private methods #
     def _create_ws_auth(self) -> None:
         self.websocket_auth_client = usdt_perpetual.WebSocket(
             test=False,
@@ -147,7 +150,7 @@ class Bybit(Exchange):
         # save previous position
         previous_positions = self.current_active_positions if self.current_active_positions is not None else []
 
-        # set current positon to new positions
+        # set current position to new positions
         self.current_active_positions = open_position_list
 
         # handle auto tp system
@@ -171,7 +174,7 @@ class Bybit(Exchange):
         if symbol_price_info and symbol_price_info.get("symbol") == self.active_symbol_name:
             self.active_symbol_latest_price = symbol_price_info
 
-    ## Public methods ##
+    # Public methods #
     def get_active_symbol(self):
         return self.active_symbol_name
 
@@ -190,7 +193,7 @@ class Bybit(Exchange):
         """ Get price info for active symbol """
         return self.active_symbol_latest_price
 
-    ## Public terminal methods ## 
+    # Public terminal methods #
     def terminal_cmd_switch_active_symbol(self, new_symbol: str) -> Tuple[bool, str]:
         """ Cmd to switch active symbol """
         try:
@@ -201,13 +204,19 @@ class Bybit(Exchange):
             if symbol_info is None:
                 raise ValueError(f"Symbol {new_symbol} not supported by Bybit")
 
-            # Set new symbom & symbol data
+            # Set new symbol & symbol data
             self.active_symbol_name = new_symbol
             self.active_symbol_info = symbol_info
 
+            # Check if ticker already subscribed
+            symbol_already_subscribed = next((ticker for ticker in self.already_subscribed_symbol_price
+                                if ticker == new_symbol), None)
+
             # connect to price feed
-            self.websocket_no_auth_client.instrument_info_stream(self._callback_symbol_price_feed,
+            if symbol_already_subscribed is None:
+                self.websocket_no_auth_client.instrument_info_stream(self._callback_symbol_price_feed,
                                                                  self.active_symbol_name)
+                self.already_subscribed_symbol_price.append(self.active_symbol_name)
 
             return True, SUCCESS_RETURN
         except Exception as e:
@@ -244,7 +253,7 @@ class Bybit(Exchange):
 
             if ticker_info is None:
                 raise ValueError(f"Missing ticker info to put scale orders")
-            
+
             number_of_orders = scale_order_data.get("number_of_orders")
             scale_from = scale_order_data.get("scale_from")
             scale_to = scale_order_data.get("scale_to")

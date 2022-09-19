@@ -1,7 +1,8 @@
 import math
-from exchange.positions_info import Position
-from exchange.symbols_info import Symbol
+from app.exchange.positions_info import Position
+from app.exchange.symbols_info import Symbol
 from typing import Literal, TypedDict
+
 
 class ScaleOrder(TypedDict):
     symbol: str
@@ -13,50 +14,52 @@ class ScaleOrder(TypedDict):
     reduce_only: bool
     close_on_trigger: bool
     position_idx: int
-    
+
+
 def ensure_http_result(http_result: dict) -> dict:
     """ Take HTTP response and throw appropriate error """
     # ret_code=0 and ext_code="" means create order success
     # ret_code=0 and ext_code!="" means create order success but some parameters were not set correctly
     # ret_code !=0 means create order fail
     # ext_code means please refer to Errors
-    
-    dict_http_result = dict(http_result) 
+
+    dict_http_result = dict(http_result)
     ret_code = int(dict_http_result.get("ret_code"))
     ext_code = dict_http_result.get("ext_code")
-    
+
     if ret_code == 0 and ext_code != "":
         raise Exception(f"Wrong parameters, code :{ext_code}")
     if ret_code != 0:
         raise Exception(f"Bybit API error {ret_code} - {ext_code}")
     return dict_http_result
 
+
 def remove_space_and_split(string: str) -> list[str]:
     return " ".join(string.split()).split(" ")
+
 
 def round_to_tick(value: float, tick_size: float) -> float:
     return math.ceil(value / tick_size) * tick_size
 
+
 def build_scale_orders(
-        current_positions: list[Position] | None, 
+        current_positions: list[Position] | None,
         ticker_info: Symbol,
         number_of_orders: int,
         scale_from: float,
         scale_to: float) -> list[ScaleOrder]:
-    
-    # Safe guards
-    if current_positions == None:
-        raise ValueError("You don't have any positon oppened")
-    elif ticker_info == None:
-        raise ValueError("Cannot find ticker info") 
-    
-    ## Get current position data
-    current_position_data = next((pos for pos in current_positions 
-                                    if pos["symbol"] == ticker_info["name"] and pos["size"] > 0.0), None)
-                
-    if current_position_data == None:
-        raise ValueError("No current position found")
+    # Safeguards #
+    if current_positions is None:
+        raise ValueError("You don't have any position opened")
+    elif ticker_info is None:
+        raise ValueError("Cannot find ticker info")
 
+    # Get current position data #
+    current_position_data = next((pos for pos in current_positions
+                                  if pos["symbol"] == ticker_info["name"] and pos["size"] > 0.0), None)
+
+    if current_position_data is None:
+        raise ValueError("No current position found")
 
     # Extract data from ticker info
     ticker_tick_size = float(ticker_info["price_filter"]["tick_size"])
@@ -82,8 +85,9 @@ def build_scale_orders(
     entry_to_percent = (entry_price / 100)
     from_value = entry_to_percent * scale_from
     to_value = entry_to_percent * scale_to
-    
-    from_price = round_to_tick(entry_price + from_value if side == "Buy" else entry_price - from_value, ticker_tick_size)
+
+    from_price = round_to_tick(entry_price + from_value if side == "Buy" else entry_price - from_value,
+                               ticker_tick_size)
     to_price = round_to_tick(entry_price + to_value if side == "Buy" else entry_price - to_value, ticker_tick_size)
 
     # Calculate step between each scale order
@@ -94,21 +98,21 @@ def build_scale_orders(
     orders: list[dict] = []
     while i < number_of_orders:
         orders.append({
-            "symbol" : ticker_info["name"],
-            "side" : "Buy" if side == "Sell" else "Sell",
-            "order_type" : "Limit",
+            "symbol": ticker_info["name"],
+            "side": "Buy" if side == "Sell" else "Sell",
+            "order_type": "Limit",
             "qty": amount_per_order,
             "price": round(from_price + i * steps, ticker_price_scale),
-            "time_in_force" :"PostOnly",
-            "reduce_only" : True,
-            "close_on_trigger" :False,
-            "position_idx" : 0
+            "time_in_force": "PostOnly",
+            "reduce_only": True,
+            "close_on_trigger": False,
+            "position_idx": 0
         })
         i = i + 1
 
     # Guard so price never goes above range
     if orders[number_of_orders - 1]["price"] != to_price:
         orders[number_of_orders - 1]["price"] = round(to_price, ticker_price_scale)
-            
+
     # Return list of dict
     return orders

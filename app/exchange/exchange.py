@@ -2,16 +2,16 @@ from abc import ABC, abstractmethod
 
 from typing import Tuple
 
-from exchange.auto_take_profit_data import AutoTakeProfitData
-from exchange.scale_order_data import ScaleOrdersData
-from exchange.positions_info import Position
-from exchange.symbol_price_info import SymbolPriceInfo
+from app.exchange.auto_take_profit_data import AutoTakeProfitData
+from app.exchange.scale_order_data import ScaleOrdersData
+from app.exchange.positions_info import Position
+from app.exchange.symbol_price_info import SymbolPriceInfo
 
 
 class Exchange(ABC):
     auto_tp_data: AutoTakeProfitData
 
-    ## Methods for the UI to get info or update data on screen
+    # Methods for the UI to get info or update data on screen #
     @abstractmethod
     def get_active_symbol(self) -> str | None:
         """ Get current active trading symbol  """
@@ -32,11 +32,11 @@ class Exchange(ABC):
         """ Get debug log array to print in log file"""
         ...
 
-    def set_auto_tp_data(self, auto_tp_data: AutoTakeProfitData) -> list | None:
+    def set_auto_tp_data(self, auto_tp_data: AutoTakeProfitData) -> None:
         """ Will be called by UI to set data for auto tp """
         self.auto_tp_data = auto_tp_data
 
-    ## CMD methods
+    #  CMD methods #
     @abstractmethod
     def terminal_cmd_switch_active_symbol(self, new_symbol: str) -> Tuple[bool, str]:
         """ Cmd to switch active symbol """

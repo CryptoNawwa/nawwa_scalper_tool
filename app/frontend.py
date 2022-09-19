@@ -6,19 +6,19 @@ from textual.widgets import Header, Footer
 from textual_inputs import TextInput
 from rich.text import Text
 from textual import events
-from ck_widgets_lv import ListViewUo
+from ck_widgets.widgets import ListViewUo
 from textual.widget import Widget, Reactive
 from rich.console import RenderableType
 from rich.align import Align
 
-from bybit.bybit import Bybit
-from exchange.exchange import Exchange
-from frontend_tools import remove_space_and_split
-from config import Configuration
-
+from app.bybit.bybit import Bybit
+from app.exchange.exchange import Exchange
+from app.exchange.auto_take_profit_data import AutoTakeProfitData
+from app.frontend_tools import remove_space_and_split
+from app.config import Configuration
 
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 SHORTCUT_PATH = os.path.join(os.path.dirname(__file__), 'shortcuts/shortcuts.json')
 DEFAULT_TERM_TITLE = "Terminal [white]-[/white] [No ticker selected]"
@@ -53,8 +53,8 @@ class Frontend(App):
         self.shortcuts_cfg = Configuration(SHORTCUT_PATH, live=True)
 
         # Chekc if client inherit Exchange
-        isInstance = issubclass(type(exchange_client), Exchange)
-        self.client: Exchange | None = exchange_client if isInstance else None
+        is_instance = issubclass(type(exchange_client), Exchange)
+        self.client: Exchange | None = exchange_client if is_instance else None
 
         self.display_title = 'Nawwa\'s Scalping Tool'
 
@@ -69,7 +69,7 @@ class Frontend(App):
         await self.bind("ctrl+q", "quit", show=False)
 
     async def on_mount(self) -> None:
-        if (self.client == None):
+        if (self.client is None):
             raise Exception("Exchange client is None, init the frontend with a proper client")
 
         # Setup widgets
@@ -144,7 +144,7 @@ class Frontend(App):
         last_price = str(symbol_info.get('last_price'))
 
         try:
-            # Get positon data (if any)
+            # Get position data (if any)
             current_position = self.client.get_current_positions()
             current_position_data = next((pos for pos in current_position
                                           if pos.get("symbol") == symbol), None)
@@ -167,7 +167,7 @@ class Frontend(App):
             for x in debug_log:
                 self.log(x)
 
-        ## Update terminal title 
+        # Update terminal title #
         self._handle_terminal_title_info()
 
     def _extract_data_from_scale_cmd(self, cmd_list: List[str]) -> Tuple[int, float, float]:
@@ -193,7 +193,7 @@ class Frontend(App):
         # Build text
         time = datetime.now().strftime("%H:%M:%S")
         actual_result = result if result else "Command not found"
-        text = Text.assemble(("> "), (cmd, "bold magenta"), (" -> "), (actual_result, "blue"), (" - "), (time),
+        text = Text.assemble("> ", (cmd, "bold magenta"), " -> ", (actual_result, "blue"), " - ", (time),
                              no_wrap=True, justify="left")
 
         # Add to screen
@@ -255,12 +255,12 @@ class Frontend(App):
 
             atp_type = str.upper(cmd_list[1])
 
-            auto_take_profit_data = {
+            auto_take_profit_data = cast(AutoTakeProfitData, {
                 "activated": False,
                 "number_of_order": 0,
                 "scale_from": 0.0,
                 "scale_to": 0.0,
-            }
+            })
 
             # Guards
             if atp_type == "ON" and len(cmd_list) < 3:
@@ -270,7 +270,7 @@ class Frontend(App):
                 await self.add_text_to_history_list(raw_cmd, f"Auto take profit is now {atp_type}")
                 return
             elif atp_type == "STATUS" or atp_type == "ST":
-                status = "ON" if self.client.auto_tp_data.get("activated") == True else "OFF"
+                status = "ON" if self.client.auto_tp_data.get("activated") is True else "OFF"
                 await self.add_text_to_history_list(raw_cmd, f"Auto take profit status is [{status}]")
                 return
 
@@ -399,6 +399,7 @@ class Frontend(App):
 
 def main():
     Frontend.run(exchange_client=Bybit(), title="Nawwa's Scalping Tool", log="scalping_tool.log")
+
 
 if __name__ == '__main__':
     main()
