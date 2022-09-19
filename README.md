@@ -300,6 +300,10 @@ Everything is typed with `TypedDict`, so as long as you return the correct data,
 
 If you need any help, follow & dm me on twitter [crypto_nawwa](https://twitter.com/crypto_nawwa) or add me on Discord: Nawwa#8129
 
+## Disclaimer 
+
+Downloading and using this bot is at your own risk, you take full responsabilities and if you lose money it's your own fault. I recommand using it on a test account first.
+
 
 ## License
 
