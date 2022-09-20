@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 
 from typing import Tuple, cast
 
-from app.exchange.auto_take_profit_data import AutoTakeProfitData
-from app.exchange.scale_order_data import ScaleOrdersData
-from app.exchange.positions_info import Position
-from app.exchange.symbol_price_info import SymbolPriceInfo
+from exchange.auto_take_profit_data import AutoTakeProfitData
+from exchange.scale_order_data import ScaleOrdersData
+from exchange.positions_info import Position
+from exchange.symbol_price_info import SymbolPriceInfo
 
 
 class Exchange(ABC):

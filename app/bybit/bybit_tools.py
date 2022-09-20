@@ -1,6 +1,6 @@
 import math
-from app.exchange.positions_info import Position
-from app.exchange.symbols_info import Symbol
+from exchange.positions_info import Position
+from exchange.symbols_info import Symbol
 from typing import Literal, TypedDict
 
 

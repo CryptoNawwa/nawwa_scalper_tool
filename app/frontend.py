@@ -11,11 +11,11 @@ from textual.widget import Widget, Reactive
 from rich.console import RenderableType
 from rich.align import Align
 
-from app.bybit.bybit import Bybit
-from app.exchange.exchange import Exchange
-from app.exchange.auto_take_profit_data import AutoTakeProfitData
-from app.frontend_tools import remove_space_and_split
-from app.config import Configuration
+from bybit.bybit import Bybit
+from exchange.exchange import Exchange
+from exchange.auto_take_profit_data import AutoTakeProfitData
+from frontend_tools import remove_space_and_split
+from config import Configuration
 
 from datetime import datetime
 from typing import List, Tuple, cast

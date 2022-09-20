@@ -1,11 +1,11 @@
 import os
-from app.bybit.bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder
-from app.config import Configuration
-from app.exchange.symbols_info import SymbolsInfo, Symbol
-from app.exchange.symbol_price_info import SymbolPriceInfo
-from app.exchange.positions_info import Position
-from app.exchange.scale_order_data import ScaleOrdersData
-from app.exchange.exchange import Exchange
+from bybit.bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder
+from config import Configuration
+from exchange.symbols_info import SymbolsInfo, Symbol
+from exchange.symbol_price_info import SymbolPriceInfo
+from exchange.positions_info import Position
+from exchange.scale_order_data import ScaleOrdersData
+from exchange.exchange import Exchange
 from typing import Tuple, cast
 
 from pybit import usdt_perpetual
