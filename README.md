@@ -42,7 +42,11 @@ Open your terminalo and navigate to the project directory
 Install dependencies
 
 ```bash
-  pip3 -r requirements.txt
+  pip3 install textual~=0.1.18
+  pip3 install textual-inputs~=0.2.6
+  pip3 install ck-widgets==0.2.0
+  pip3 installi pybit~=2.4.0
+  pip3 install install rich~=12.5.1
 ```
 
 Go into app folder
