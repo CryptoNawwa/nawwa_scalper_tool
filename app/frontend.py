@@ -13,6 +13,7 @@ from rich.align import Align
 
 from bybit.bybit import Bybit
 from exchange.exchange import Exchange
+from exchange.positions_info import Position
 from exchange.auto_take_profit_data import AutoTakeProfitData
 from frontend_tools import remove_space_and_split
 from config import Configuration
@@ -106,7 +107,7 @@ class Frontend(App):
         if not self.show_shortcuts_bar: False
         self.show_shortcuts_bar = not self.show_shortcuts_bar
 
-    def _change_terminal_title(self, ticker: str | None, price: str | None, positions: dict | None) -> None:
+    def _change_terminal_title(self, ticker: str | None, price: str | None, positions: Position | None) -> None:
         """ Change the terminal title based on arg and refresh screen if necessary  """
         previous_title = self.terminal_cmd.title
 

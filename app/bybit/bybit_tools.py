@@ -1,7 +1,7 @@
 import math
 from exchange.positions_info import Position
 from exchange.symbols_info import Symbol
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, cast
 
 
 class ScaleOrder(TypedDict):
@@ -14,6 +14,11 @@ class ScaleOrder(TypedDict):
     reduce_only: bool
     close_on_trigger: bool
     position_idx: int
+
+
+def filter_postion_with_zero_size(raw_postion: dict):
+    raw_position_data = cast(list[Position], raw_postion)
+    return list(filter(lambda position: position.get("size") > 0.0, raw_position_data))
 
 
 def ensure_http_result(http_result: dict) -> dict:

@@ -1,4 +1,5 @@
 import os
+from bybit.bybit_tools import filter_postion_with_zero_size
 from bybit.bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder
 from config import Configuration
 from exchange.symbols_info import SymbolsInfo, Symbol
@@ -48,7 +49,7 @@ class Bybit(Exchange):
             test=False,
             api_key=self.config.data.BybitApiKey,
             api_secret=self.config.data.BybitSecretApiSecret,
-            domain="bybit")
+            domain="bytick")
 
     def _create_ws_no_auth(self) -> None:
         self.websocket_no_auth_client = usdt_perpetual.WebSocket(
@@ -63,6 +64,20 @@ class Bybit(Exchange):
 
     def _load_bybit_symbol(self) -> None:
         self.symbols = dict(self.http_client.query_symbol()).get("result")
+    
+    def _get_current_position_for_symbol(self, new_symbol : str) -> None:
+        """ Will call API get current position for this symbol """
+        try:
+            data = ensure_http_result(self.http_client.my_position(symbol=new_symbol))
+
+            open_position_list = filter_postion_with_zero_size(data.get("result"))
+
+            self.current_active_positions = open_position_list if open_position_list else []
+
+        except Exception as z:
+            self.debug_log.append(str(z))
+            return
+
 
     def _send_scale_orders(self, orders: list[ScaleOrder]) -> Tuple[bool, str]:
         """ Will call API and send scale orders """
@@ -141,11 +156,8 @@ class Bybit(Exchange):
             self.debug_log.append("_callback_listen_to_position no exchange_msg")
             return
 
-        # cast bybit data it into typed dict
-        raw_position_data = cast(list[Position], exchange_msg.get("data"))
-
         # filter out closed position (bybit call this event when we close a position, with a size of 0 lol)
-        open_position_list = list(filter(lambda position: position.get("size") > 0.0, raw_position_data))
+        open_position_list = filter_postion_with_zero_size(exchange_msg.get("data"))
 
         # save previous position
         previous_positions = self.current_active_positions if self.current_active_positions is not None else []
@@ -207,6 +219,9 @@ class Bybit(Exchange):
             # Set new symbol & symbol data
             self.active_symbol_name = new_symbol
             self.active_symbol_info = symbol_info
+
+            # Load current position for this symbol
+            #self._get_current_position_for_symbol(new_symbol)
 
             # Check if ticker already subscribed
             symbol_already_subscribed = next((ticker for ticker in self.already_subscribed_symbol_price
