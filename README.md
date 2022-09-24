@@ -36,7 +36,7 @@ Download the project using this link, then unzip it
 Open your terminalo and navigate to the project directory
 
 ```bash
-  cd nawwa-scalper-tool
+  cd nawwa_scalper_tool
 ```
 
 Install dependencies
