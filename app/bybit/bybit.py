@@ -221,7 +221,7 @@ class Bybit(Exchange):
             self.active_symbol_info = symbol_info
 
             # Load current position for this symbol
-            #self._get_current_position_for_symbol(new_symbol)
+            self._get_current_position_for_symbol(new_symbol)
 
             # Check if ticker already subscribed
             symbol_already_subscribed = next((ticker for ticker in self.already_subscribed_symbol_price
