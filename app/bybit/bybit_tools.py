@@ -85,19 +85,20 @@ def build_scale_orders(
         raise ValueError(f"Scaling too big, min size per limit order : {min_trad_quant}")
     elif amount_per_order > max_trad_quant:
         raise ValueError(f"Scaling too small, max size per limit order : {max_trad_quant}")
-
+    
     # Calculate starting and ending price of the range (scale)
     entry_to_percent = (entry_price / 100)
-    from_value = entry_to_percent * scale_from
-    to_value = entry_to_percent * scale_to
-
-    from_price = round_to_tick(entry_price + from_value if side == "Buy" else entry_price - from_value,
-                               ticker_tick_size)
-    to_price = round_to_tick(entry_price + to_value if side == "Buy" else entry_price - to_value, ticker_tick_size)
+    from_value = entry_to_percent * scale_from if side == "Buy" else entry_to_percent * -scale_from 
+    to_value = entry_to_percent * scale_to if side == "Buy" else entry_to_percent * -scale_to 
+    
+    from_price = round_to_tick(entry_price + from_value, ticker_tick_size)
+    to_price = round_to_tick( entry_price + to_value, ticker_tick_size)
 
     # Calculate step between each scale order
-    steps = round_to_tick((to_price - from_price) / (number_of_orders - 1), ticker_tick_size)
-
+    positive_diff = to_price - from_price if side == "Buy" else from_price - to_price
+    raw_step = round_to_tick(positive_diff / (number_of_orders - 1), ticker_tick_size)
+    step = raw_step * 1 if side == "Buy" else raw_step * -1
+    
     # Create scale order array
     i = 0
     orders: list[dict] = []
@@ -107,7 +108,7 @@ def build_scale_orders(
             "side": "Buy" if side == "Sell" else "Sell",
             "order_type": "Limit",
             "qty": amount_per_order,
-            "price": round(from_price + i * steps, ticker_price_scale),
+            "price": round(from_price + i * step, ticker_price_scale),
             "time_in_force": "PostOnly",
             "reduce_only": True,
             "close_on_trigger": False,

@@ -45,6 +45,8 @@ class Bybit(Exchange):
 
     # Private methods #
     def _create_ws_auth(self) -> None:
+        if self.config.data.BybitApiKey == "" or self.config.data.BybitSecretApiSecret == "":
+            raise ValueError("Missing Bybit api keys or secrets in conf.json file")
         self.websocket_auth_client = usdt_perpetual.WebSocket(
             test=False,
             api_key=self.config.data.BybitApiKey,
