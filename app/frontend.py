@@ -14,7 +14,7 @@ from rich.align import Align
 from bybit.bybit import Bybit
 from exchange.exchange import Exchange
 from exchange.positions_info import Position
-from exchange.auto_take_profit_data import AutoTakeProfitData
+from exchange.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
 from frontend_tools import remove_space_and_split
 from config import Configuration
 
@@ -185,8 +185,20 @@ class Frontend(App):
             raise ValueError("Wrong data for scale order")
         return number_of_orders, scale_from, scale_to
 
-    def _get_shortcut_from_cmd(self, cmd: str) -> str | None:
-        return self.shortcuts_cfg.data.get(cmd, None)
+    def _extract_data_from_tp_cmd(self, cmd_list: List[str]) -> float:
+        """ Helper to extract data from the tp cmd typed by user"""
+
+        if len(cmd_list) != 2:
+            raise ValueError("Wrong tp syntax")
+
+        percent_away = float(cmd_list[1])
+
+        if percent_away <= 0.0:
+            raise ValueError("Wrong data for tp command")
+        return percent_away
+
+    def _get_shortcut_from_cfg(self, shortcut: str) -> str | None:
+        return self.shortcuts_cfg.data.get(shortcut, None)
 
     async def add_text_to_history_list(self, cmd: str, result: str | None) -> None:
         """Add text to the history list on the UI"""
@@ -254,55 +266,75 @@ class Frontend(App):
             if len(cmd_list) < 2:
                 raise ValueError("Wrong syntax")
 
-            atp_type = str.upper(cmd_list[1])
+            user_input_atp_action = str.upper(cmd_list[1])
 
-            auto_take_profit_data = cast(AutoTakeProfitData, {
-                "activated": False,
-                "number_of_order": 0,
-                "scale_from": 0.0,
-                "scale_to": 0.0,
-            })
-
-            # Guards
-            if atp_type == "ON" and len(cmd_list) < 3:
+            # Guards user input action
+            if user_input_atp_action == "ON" and len(cmd_list) < 3:
                 raise ValueError("Cannot set autotp to ON without a following shortcut")
-            elif atp_type == "OFF":
-                self.client.auto_tp_data = auto_take_profit_data
-                await self.add_text_to_history_list(raw_cmd, f"Auto take profit is now {atp_type}")
+            elif user_input_atp_action == "OFF":
+                self.client.auto_tp_data = None
+                await self.add_text_to_history_list(raw_cmd, f"Auto take profit is now {user_input_atp_action}")
                 return
-            elif atp_type == "STATUS" or atp_type == "ST":
-                status = "ON" if self.client.auto_tp_data.get("activated") is True else "OFF"
+            elif user_input_atp_action == "STATUS" or user_input_atp_action == "ST":
+                status = "ON" if self.client.auto_tp_data is not None else "OFF"
                 await self.add_text_to_history_list(raw_cmd, f"Auto take profit status is [{status}]")
                 return
 
-            atp_scale_shortcut = cmd_list[2]
+            user_input_shortcut = cmd_list[2]
 
-            # transform input into the scale shortcut & transform to list
-            atp_scale_cmd = self._get_shortcut_from_cmd(atp_scale_shortcut)
-            if atp_scale_cmd is None:
-                raise ValueError(f"Cannot find shortcut {atp_scale_shortcut}")
-            atp_scale_cmd_list = remove_space_and_split(atp_scale_cmd)
+            # get user input and find the shortcut from cfg 
+            shortcut_found = self._get_shortcut_from_cfg(user_input_shortcut)
 
-            # ensure the shortcut is a scale shortcut
-            if atp_scale_cmd_list[0] != "scale" and atp_scale_cmd_list[0] != "s":
-                raise ValueError(f"Wrong shortcut, please only set scale shortcut for atp command")
+            if shortcut_found is None:
+                raise ValueError(f"Cannot find shortcut {user_input_shortcut}")
 
-            # extract data from shortcut
-            number_of_orders, scale_from, scale_to = self._extract_data_from_scale_cmd(atp_scale_cmd_list)
+            await self.add_text_to_history_list("shortcut found ", shortcut_found)
+            # transform shortcut found to list
+            atp_command_list = remove_space_and_split(shortcut_found)
 
-            # Set data into bybit client
-            auto_take_profit_data["activated"] = True
-            auto_take_profit_data["number_of_orders"] = number_of_orders
-            auto_take_profit_data["scale_from"] = scale_from
-            auto_take_profit_data["scale_to"] = scale_to
-            self.client.auto_tp_data = auto_take_profit_data
+            is_single_tp_shortcut = atp_command_list[0] == 'tp'
+            is_scale_tp_shortcut = atp_command_list[0] == "scale" or atp_command_list[0] == "s"
 
-            if atp_type == "ON":
+            # ensure the shortcut is a scale or tp shortcut
+            if is_single_tp_shortcut is False and is_scale_tp_shortcut is False:
+                raise ValueError(f"Wrong shortcut, please only set scale or tp shortcut for atp command")
+        
+
+          
+            if is_scale_tp_shortcut:
+                # extract data from shortcut
+                number_of_orders, scale_from, scale_to = self._extract_data_from_scale_cmd(atp_command_list)
+
+                auto_take_profit_scale_data = cast(AutoTakeProfitScaleData, {
+                    "number_of_order": 0,
+                    "scale_from": 0.0,
+                    "scale_to": 0.0,
+                })
+
+                # Set data into bybit client
+                auto_take_profit_scale_data["number_of_orders"] = number_of_orders
+                auto_take_profit_scale_data["scale_from"] = scale_from
+                auto_take_profit_scale_data["scale_to"] = scale_to
+
+                self.client.auto_tp_data = auto_take_profit_scale_data
+
+            elif is_single_tp_shortcut:
+                # extract data from shortcut
+                percent_away = self._extract_data_from_tp_cmd(atp_command_list)
+
+                auto_take_profit_single_tp_data = cast(AutoTakeProfitSingleTpData, {
+                    "percent_away": 0.0,
+                })
+                auto_take_profit_single_tp_data["percent_away"] = percent_away
+
+                self.client.auto_tp_data = auto_take_profit_single_tp_data
+
+            if user_input_atp_action == "ON":
                 await self.add_text_to_history_list(raw_cmd,
-                                                    f"Auto take profit is now [{atp_type}] with shortcut {atp_scale_shortcut}")
-            elif atp_type == "UPDATE" or atp_type == "UP":
+                  f"Auto take profit is now [{user_input_atp_action}] with shortcut {user_input_shortcut}")
+            elif user_input_atp_action == "UPDATE" or user_input_atp_action == "UP":
                 await self.add_text_to_history_list(raw_cmd,
-                                                    f"Auto take profit was updated to use shortcut {atp_scale_shortcut}")
+                    f"Auto take profit was updated to use shortcut {user_input_shortcut}")
         except Exception as e:
             self.log(f'Error in cmd_auto_tp : {str(e)}')
             await self.add_text_to_history_list(raw_cmd, str(e))
@@ -331,6 +363,28 @@ class Frontend(App):
                 await self.add_text_to_history_list(raw_cmd, msg)
         except Exception as e:
             self.log(f'Error in cmd_scale_limit_order : {str(e)}')
+            await self.add_text_to_history_list(raw_cmd, str(e))
+
+    async def cmd_tp_limit_order(self, raw_cmd, cmd_list: List[str]) -> None:
+        """ Take profit single order cmd ie. tp 0.4 """
+        try:
+
+            active_symbol = self.client.get_active_symbol()
+
+            if active_symbol is None:
+                raise ValueError("No active symbol")
+
+            percent_away = self._extract_data_from_tp_cmd(cmd_list)
+
+            success, msg = self.client.terminal_cmd_send_single_tp_order({"percent_away": percent_away})
+
+            if success is True:
+                await self.add_text_to_history_list(raw_cmd,
+                                                    f"Take profit limit order placed")
+            else:
+                await self.add_text_to_history_list(raw_cmd, msg)
+        except Exception as e:
+            self.log(f'Error in cmd_tp_limit_order : {str(e)}')
             await self.add_text_to_history_list(raw_cmd, str(e))
 
     async def cmd_manage_shortcuts(self, raw_cmd: str, cmd_list: List[str]) -> None:
@@ -366,6 +420,8 @@ class Frontend(App):
                 await self.cmd_select_ticker(raw_cmd, cmd_list)
             case "scale" | "s":
                 await self.cmd_scale_limit_order(raw_cmd, cmd_list)
+            case "tp":
+                await self.cmd_tp_limit_order(raw_cmd, cmd_list)
             case "cancel" | "c":
                 await self.cmd_cancel_orders(raw_cmd, cmd_list)
             case "autotp" | "atp":
@@ -382,7 +438,7 @@ class Frontend(App):
         with self.console.status("Talking with Bybit.."):
             # set cmd & shortcut
             cmd = self.terminal_cmd.value
-            shortcut = self._get_shortcut_from_cmd(cmd)
+            shortcut = self._get_shortcut_from_cfg(cmd)
 
             # use cmd or shortcut
             to_execute = shortcut if shortcut is not None else cmd

@@ -47,22 +47,75 @@ def round_to_tick(value: float, tick_size: float) -> float:
     return math.ceil(value / tick_size) * tick_size
 
 
+def _get_current_position_data(current_positions: list[Position] | None, ticker_info: Symbol):
+    return next((pos for pos in current_positions
+                                  if pos["symbol"] == ticker_info["name"] and pos["size"] > 0.0), None)
+
+def _guard_ticker_and_position_info(current_positions: list[Position] | None, ticker_info: Symbol):
+    if current_positions is None:
+        raise ValueError("You don't have any position opened")
+    elif ticker_info is None:
+        raise ValueError("Cannot find ticker info")
+
+def build_single_tp_order(
+        current_positions: list[Position] | None,
+        ticker_info: Symbol,
+        percent_away: float) -> ScaleOrder:
+    
+    _guard_ticker_and_position_info(current_positions, ticker_info)
+    current_position_data = _get_current_position_data(current_positions, ticker_info)
+    
+    if current_position_data is None:
+        raise ValueError("No current position found")
+            
+    if percent_away is None:
+        raise ValueError("No parameter given for single tp order")
+
+    # Extract data from ticker info
+    ticker_tick_size = float(ticker_info["price_filter"]["tick_size"])
+    ticker_price_scale = int(ticker_info["price_scale"])
+
+    # Extract data from current position
+    side = str(current_position_data.get("side"))
+    entry_price = float(current_position_data.get("entry_price"))
+    pos_size = float(current_position_data.get("size"))
+
+    entry_price = float(current_position_data.get("entry_price"))
+    # Calculate starting and ending price of the range (scale)
+
+    entry_to_percent = (entry_price / 100)
+    limit_value = entry_to_percent * percent_away if side == "Buy" else entry_to_percent * -percent_away 
+    limit_price = round_to_tick(entry_price + limit_value, ticker_tick_size)
+
+    take_profit_order: ScaleOrder = {
+            "symbol": ticker_info["name"],
+            "side": "Buy" if side == "Sell" else "Sell",
+            "order_type": "Limit",
+            "qty": pos_size,
+            "price": round(limit_price, ticker_price_scale),
+            "time_in_force": "PostOnly",
+            "reduce_only": True,
+            "close_on_trigger": False,
+            "position_idx": 0
+        }
+    
+    return take_profit_order
+
+
 def build_scale_orders(
         current_positions: list[Position] | None,
         ticker_info: Symbol,
         number_of_orders: int,
         scale_from: float,
         scale_to: float) -> list[ScaleOrder]:
-    # Safeguards #
-    if current_positions is None:
-        raise ValueError("You don't have any position opened")
-    elif ticker_info is None:
-        raise ValueError("Cannot find ticker info")
 
+ 
+     # Safeguards #
+    _guard_ticker_and_position_info(current_positions, ticker_info)
+       
     # Get current position data #
-    current_position_data = next((pos for pos in current_positions
-                                  if pos["symbol"] == ticker_info["name"] and pos["size"] > 0.0), None)
-
+    current_position_data = _get_current_position_data(current_positions, ticker_info)
+    
     if current_position_data is None:
         raise ValueError("No current position found")
 

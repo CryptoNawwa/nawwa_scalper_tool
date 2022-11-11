@@ -1,25 +1,38 @@
 
 # Nawwa Scalper Tool
 
-This CLI is a textual UI (TUI) scalping tool, its goal is to automate certain action when you are trading / scalping, aka : place scale orders, auto-limit order, cancel orders, shortcuts..  
+This CLI is a textual UI (TUI) scalping tool, it's goal is to automate certain action when you are trading / scalping, aka : place scale orders, auto-limit order, cancel orders, shortcuts..  
 
-This CLI made because our friend [Ichibot](https://gitlab.com/Ichimikichiki/ichibot-client-app) does not support Bybit yet !  
+This `tool` was made because our friend [Ichibot](https://gitlab.com/Ichimikichiki/ichibot-client-app) does not support Bybit yet !  
 
 The current version of the NawwaBot only support the **Bybit** exchange but the code was made in a way that's easy for any developer to implement a new exchange
-## Demo
+# Demo
 
 Smol demo 
 [![asciicast](https://asciinema.org/a/gXh5ocBOkqe3e5L5JvR59bdUn.svg)](https://asciinema.org/a/gXh5ocBOkqe3e5L5JvR59bdUn)
 
-## Run Locally
+# How to update
+
+If you already have a version of this bot running you just have to download the new source code.
+
+It will download a folder on your computer, just navigate to the folder and run the bot like you are use to.    
+
+---
+
+Keep your current bot folder just in case the new version is not working for you so you can still go back and use the bot located in your current folder.
+
+
+Shoot me a message on discord if you have any problem <3
+
+# How to install
 
 **MacOS / LINUX**  
-Use any terminal
+Use any terminal you want
 
 **Windows**  
 Because it's a graphic UI, you will need to use a specific terminal called [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701?hl=fr-fr&gl=fr). It's a terminal developed by microsoft and you can install it using the microsoft store. Do that first.
 
-
+### Installation guide 
 Install this  :
 
 - [Python 3.10](https://www.python.org/downloads/release/python-3105/) (Scroll at bottom & download)
@@ -33,7 +46,7 @@ Download the project using this link, then unzip it
   https://github.com/CryptoNawwa/nawwa_scalper_tool/archive/refs/heads/main.zip
 ```
 
-Open your terminalo and navigate to the project directory
+Open your terminal and navigate to the project directory
 
 ```bash
   cd nawwa_scalper_tool
@@ -63,25 +76,28 @@ Open the `bybit/data/conf.json` file using any text editor and copy past your ap
 }
 ```
 
-Run the CLI using this command
+If you are inside the `App` folder,  Run the bot using this command :
 
 ```bash
   python3 frontend.py
 ```
 
+You are done, you can use the bot !
 
-## Features
 
-- Cool UI 
+# Features
+
+- Cool UI kekW
 - Display current active ticker in terminal UI 
 - Display current position size in terminal UI
-- Possibility to place scale orders based on .% range (only support reduce-only order atm)
-- Automatic take-profit, it will automatically place pre-configured scale orders when you enter any position
-- Possibility to cancel all orders
+- Place scale reduce-only limit orders based on .% range (only support reduce-only order atm)
+- Place only 1 (one) reduce only limit order, based on .% away from entry
+- Automatic take-profit system, it will automatically place pre-configured scale orders when you enter any position
+- Cancel all orders
 - Create/Update/Delete your Shortcuts (shortcuts = alias for your commands)
 
 
-## Shortcuts
+# Shortcuts
 
 To add / remove shortcuts, open the `shortcuts.json` file located in `app/shortcuts/shortcuts.json` and modify it to your needs.
 
@@ -96,11 +112,15 @@ Shortcut file syntax is :
 Example of a shortcut file : 
 ```json
 {
-    "tp1": "scale 5 0.01 0.03", 
-    "tp2": "scale 5 0.02 0.04",
-    "tp3": "scale 5 0.03 0.06",
-    "tp4": "scale 2 0.01 0.02",
+    "s1": "scale 5 0.01 0.03", 
+    "s2": "scale 5 0.02 0.04",
+
+    "tp1": "tp 0.1",
+    "tp4": "tp 0.3",
+
     "atp4": "atp ON tp4",
+    "atp4": "atp ON s1",
+
     "atom" : "ticker atomusdt",
     "eth" : "ticker ethusdt",
     "etc" : "ticker etcusdt" 
@@ -112,7 +132,7 @@ Pretty simple, when you type ```tp1``` in the terminal, it will execute `scale 5
 You can press `L` on the UI and it will display the shortcut list, press `L` again to close
 
 *Note : Shortcut are also used by the `autotp` command.*
-## Commands documenation
+# Command list
 
 
 ### **ticker [ticker_name]**
@@ -146,6 +166,19 @@ In this example,  it will create 10 orders from 0.1% to 0.2%
 *Note : For this command to work you need to have an open position on the active ticker*
 
 ---
+
+### **tp [away_from_entry_%]**
+
+This command create 1 (one) reduce-only limit order on the active ticker, from `[away_from_entry_%]` above entry_price (or below if short)
+```sh
+tp 0.4
+```
+In this example,  it will create 1 order from 0.4% away from entry price
+
+*Note : For this command to work you need to have an open position on the active ticker*
+
+
+---
 ### **cancel [type_of_cancel]**
 
 This command cancel limit orders for the current ticker, based on the type
@@ -169,7 +202,7 @@ This command is usefull to add / remove / modify shortcuts
 
 Available actions: 
 - ADD
-- UPDATE
+- UPDATE (UP)
 - DEL
 
 
@@ -223,9 +256,9 @@ The result of this example in the `shortcuts.json` file is :
 
 
 ---
-### **autotp [atp_cmd] [shortcut_name]**
+### **autotp [atp_action] [shortcut_name]**
 
-This command will perform the `[atp_cmd]` with `[shortcut_name]` as parameter
+This command will perform the `[atp_action]` with `[shortcut_name]` as parameter
 
 Actions availabe : 
 - ON
@@ -233,9 +266,9 @@ Actions availabe :
 - UPDATE
 - STATUS
 
-Autotp (for automatic take profit) system will automatically set reduce-only orders based on the shortcut config you gave him.  
+Autotp (for automatic take profit) system will automatically set reduce-only limit orders based on the shortcut config you gave him.  
 
-:warning: Once it's ON, the autotp system works for all the positions you enter, on every ticker. It means that if you take a trade on another pair, it will place the scale orders, it's not related to the current active ticker (might change that later if it's a problem)
+:warning: Once it's `ON` , the `autotp` system works for all the positions you enter, on every ticker. It means that if you take a trade on another pair, it will place the limoit order(s), it's not only related to the current active ticker (might change that later if it's a problem)
 
 ### **ON** example
 ```sh
@@ -243,12 +276,12 @@ autotp ON tp1
 or
 atp ON tp1
 ```
-This will activate the autotp system with the shortcut `tp1` as scaling order config  
+This will activate the autotp system with the shortcut `tp1` as limit order config  
 It means, if we enter a position on any coin, the bot will execute this shortcut `"tp1" : scale 10 0.1 to 0.2 `   
 
 It will automatically set 10 limit orders from 0.1 to 0.2 each time you enter a position
 
-*Note : Obviously, only use scale order shortcuts*
+*Note : Obviously, only use `scale` or `tp` shortcuts*
 
 ### **UPDATE** example
 ```sh
@@ -276,9 +309,10 @@ atp ST
 ```
 This will print the current status (ON / FF)
 
-## For dev - Implement another exchange 
 
-The code was made so it's easy for any developer to implement another exchange than Bybit. 
+# For devs - How to Implement another exchange 
+
+The code was made so it's easy for any developer to implement another exchange than Bybit (hopefully)
 
 You just have to create a class that implements the `Exchange` abstract class, and the methods.
 
@@ -300,16 +334,16 @@ Everything is typed with `TypedDict`, so as long as you return the correct data,
 
 
 
-## Support
+# Support
 
 If you need any help, follow & dm me on twitter [crypto_nawwa](https://twitter.com/crypto_nawwa) or add me on Discord: Nawwa#8129
 
-## Disclaimer 
+# Disclaimer 
 
 Downloading and using this bot is at your own risk, you take full responsabilities and if you lose money it's your own fault. I recommand using it on a test account first.
 
 
-## License
+# License
 
 [MIT](https://choosealicense.com/licenses/mit/)
 

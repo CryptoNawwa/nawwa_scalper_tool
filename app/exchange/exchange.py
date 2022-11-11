@@ -2,27 +2,23 @@ from abc import ABC, abstractmethod
 
 from typing import Tuple, cast
 
-from exchange.auto_take_profit_data import AutoTakeProfitData
+from exchange.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
 from exchange.scale_order_data import ScaleOrdersData
 from exchange.positions_info import Position
 from exchange.symbol_price_info import SymbolPriceInfo
+from exchange.single_tp_order_data import SingleTpOrder
 
 
 class Exchange(ABC):
     def __init__(self):
-        self._auto_tp_data: AutoTakeProfitData = cast(AutoTakeProfitData, {
-            "activated": False,
-            "number_of_order": 0,
-            "scale_from": 0.0,
-            "scale_to": 0.0,
-        })
+        self._auto_tp_data: AutoTakeProfitScaleData | AutoTakeProfitSingleTpData | None = None
 
     @property
-    def auto_tp_data(self) -> AutoTakeProfitData:
+    def auto_tp_data(self) -> AutoTakeProfitScaleData | AutoTakeProfitSingleTpData | None:
         return self._auto_tp_data
 
     @auto_tp_data.setter
-    def auto_tp_data(self, value: AutoTakeProfitData):
+    def auto_tp_data(self, value: AutoTakeProfitScaleData | AutoTakeProfitSingleTpData):
         self._auto_tp_data = value
 
     @auto_tp_data.deleter
@@ -64,5 +60,10 @@ class Exchange(ABC):
 
     @abstractmethod
     def terminal_cmd_set_scale_orders(self, scale_order_data: ScaleOrdersData) -> Tuple[bool, str]:
+        """ Cmd to place scale orders """
+        ...
+
+    @abstractmethod
+    def terminal_cmd_send_single_tp_order(self, single_tp_data: SingleTpOrder) -> Tuple[bool, str]:
         """ Cmd to place scale orders """
         ...

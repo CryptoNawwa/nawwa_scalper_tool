@@ -1,11 +1,14 @@
 import os
+
 from bybit.bybit_tools import filter_postion_with_zero_size
-from bybit.bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder
+from bybit.bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder, build_single_tp_order, filter_postion_with_zero_size
 from config import Configuration
 from exchange.symbols_info import SymbolsInfo, Symbol
+from exchange.single_tp_order_data import SingleTpOrder
 from exchange.symbol_price_info import SymbolPriceInfo
 from exchange.positions_info import Position
 from exchange.scale_order_data import ScaleOrdersData
+from exchange.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
 from exchange.exchange import Exchange
 from typing import Tuple, cast
 
@@ -80,8 +83,7 @@ class Bybit(Exchange):
             self.debug_log.append(str(z))
             return
 
-
-    def _send_scale_orders(self, orders: list[ScaleOrder]) -> Tuple[bool, str]:
+    def _send_limit_orders(self, orders: list[ScaleOrder]) -> Tuple[bool, str]:
         """ Will call API and send scale orders """
         for order in orders:
             self.http_client.place_active_order(
@@ -96,6 +98,30 @@ class Bybit(Exchange):
                 position_idx=order.get("position_idx")
             )
         return True, SUCCESS_RETURN
+
+
+    def _get_auto_tp_orders(self, new_position: Position, ticker_info: dict) -> list[ScaleOrder]:
+        ticker_info = cast(Symbol, ticker_info)
+        
+        # scale orders - ugly bcs python does not have type checking on class lol
+        if self.auto_tp_data.get("number_of_orders") is not None:
+            return build_scale_orders(
+                [new_position],
+                ticker_info,
+                self.auto_tp_data.get("number_of_orders"),
+                self.auto_tp_data.get("scale_from"),
+                self.auto_tp_data.get("scale_to"))
+
+        # single tp order
+        elif self.auto_tp_data.get("percent_away") is not None:
+            self.debug_log.append(self.auto_tp_data.get("percent_away"))
+            return [build_single_tp_order(
+                [new_position],
+                ticker_info,
+                self.auto_tp_data.get("percent_away"))]
+      
+        raise ValueError(f"Wrong auto_tp_data_type, should never happend")
+
 
     def _do_auto_tp_system(self, new_position: Position):
         """ Will get the position info and shortcuts cmd and set the appropriate scale orders"""
@@ -113,31 +139,23 @@ class Bybit(Exchange):
             except Exception as z:
                 self.debug_log.append("No active orders to cancel")
 
-            # build & send scale orders based on shortcut in auto_tp_data
-            success, msg = self._send_scale_orders(build_scale_orders(
-                [new_position],
-                cast(Symbol, ticker_info),
-                self.auto_tp_data.get("number_of_orders"),
-                self.auto_tp_data.get("scale_from"),
-                self.auto_tp_data.get("scale_to")))
+            # build & send orders based auto_tp_data type
+            success, msg = self._send_limit_orders(self._get_auto_tp_orders(new_position, ticker_info))
 
             if success is False:
                 raise Exception(msg)
+
         except Exception as e:
             self.debug_log.append(str(e))
 
     def _trigger_auto_tp_system(self, previous_positions: list[Position]):
 
-        # return if auto_tp_data
+         # return if no auto tp needed
         if self.auto_tp_data is None:
             self.debug_log.append("_handle_auto_tp_system : auto_tp_data is None")
             return
 
-        # return if no auto tp needed
-        if self.auto_tp_data.get("activated") is False:
-            return
-
-            # find new position by looking a prev ones
+        # find new position or same position but with > size (martingale) by doing a diff with the previous list of positions
         new_positions: dict = {}
         for pos in self.current_active_positions:
             pos_symbol = pos.get("symbol")
@@ -154,12 +172,14 @@ class Bybit(Exchange):
     def _callback_listen_to_position(self, exchange_msg: dict | None) -> None:
         """ Called everytime we get into a position """
 
-        if not exchange_msg or not exchange_msg.get("data"):
+        new_positions_from_websocket = exchange_msg.get("data")
+
+        if not exchange_msg or not new_positions_from_websocket:
             self.debug_log.append("_callback_listen_to_position no exchange_msg")
             return
 
         # filter out closed position (bybit call this event when we close a position, with a size of 0 lol)
-        open_position_list = filter_postion_with_zero_size(exchange_msg.get("data"))
+        open_position_list = filter_postion_with_zero_size(new_positions_from_websocket)
 
         # save previous position
         previous_positions = self.current_active_positions if self.current_active_positions is not None else []
@@ -275,7 +295,7 @@ class Bybit(Exchange):
             scale_from = scale_order_data.get("scale_from")
             scale_to = scale_order_data.get("scale_to")
 
-            return self._send_scale_orders(build_scale_orders(
+            return self._send_limit_orders(build_scale_orders(
                 self.current_active_positions,
                 cast(Symbol, ticker_info),
                 number_of_orders,
@@ -283,4 +303,23 @@ class Bybit(Exchange):
                 scale_to))
         except Exception as e:
             self.debug_log.append("Error in place_scale_orders" + str(e))
+            return False, str(e)
+
+    def terminal_cmd_send_single_tp_order(self, single_tp_data: SingleTpOrder) -> Tuple[bool, str]:
+        """ Place one tp order based on parameters """
+        try:
+            ticker_info = next((info for info in self.symbols
+                                if info["name"] == self.active_symbol_name), None)
+
+            if ticker_info is None:
+                raise ValueError(f"Missing ticker info to single tp order")
+
+            percent_away = single_tp_data.get("percent_away")
+    
+            return self._send_limit_orders([build_single_tp_order(
+                self.current_active_positions,
+                cast(Symbol, ticker_info),
+                percent_away)])
+        except Exception as e:
+            self.debug_log.append("Error in terminal_cmd_set_single_tp_order" + str(e))
             return False, str(e)
