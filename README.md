@@ -17,6 +17,12 @@ If you already have a version of this bot running you just have to download the 
 
 It will download a folder on your computer, just navigate to the folder and run the bot like you are use to.    
 
+You just have to keep 2 files :  
+
+- shortcut.json (where you store your aliases and shortcuts)
+- conf.json (where you store your api keys)
+
+
 ---
 
 Keep your current bot folder just in case the new version is not working for you so you can still go back and use the bot located in your current folder.
