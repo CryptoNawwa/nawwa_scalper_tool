@@ -10,6 +10,7 @@ from ck_widgets.widgets import ListViewUo
 from textual.widget import Widget, Reactive
 from rich.console import RenderableType
 from rich.align import Align
+from binance_ex.binance import Binance
 
 from bybit.bybit import Bybit
 from exchange.exchange import Exchange
@@ -53,7 +54,7 @@ class Frontend(App):
         # Set shortcut cfg handler
         self.shortcuts_cfg = Configuration(SHORTCUT_PATH, live=True)
 
-        # Chekc if client inherit Exchange
+        # Check if client inherit Exchange class
         is_instance = issubclass(type(exchange_client), Exchange)
         self.client: Exchange | None = exchange_client if is_instance else None
 
@@ -455,7 +456,7 @@ class Frontend(App):
 
 
 def main():
-    Frontend.run(exchange_client=Bybit(), title="Nawwa's Scalping Tool", log="scalping_tool.log")
+    Frontend.run(exchange_client=Binance(), title="Nawwa's Scalping Tool", log="scalping_tool.log")
 
 
 if __name__ == '__main__':
