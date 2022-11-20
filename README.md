@@ -262,9 +262,9 @@ The result of this example in the `shortcuts.json` file is :
 
 
 ---
-### **autotp [atp_action] [shortcut_name]**
+### **autotp [atp_action] [shortcut_name] (cancel_off)**
 
-This command will perform the `[atp_action]` with `[shortcut_name]` as parameter
+This command will perform the `[atp_action]` with `[shortcut_name]` as parameter, `cancel_off` is optional
 
 Actions availabe : 
 - ON
@@ -272,28 +272,43 @@ Actions availabe :
 - UPDATE
 - STATUS
 
+Writing `cancel_off` at the end will disable the automatic cancelation of orders when the ATP is triggered.    
+
+
 Autotp (for automatic take profit) system will automatically set reduce-only limit orders based on the shortcut config you gave him.  
 
-:warning: Once it's `ON` , the `autotp` system works for all the positions you enter, on every ticker. It means that if you take a trade on another pair, it will place the limoit order(s), it's not only related to the current active ticker (might change that later if it's a problem)
+:warning: Once it's `ON` , the `autotp` system works for all the positions you enter, on every ticker. It means that if you take a trade on another pair, it will place the limit order(s), it's not only related to the current active ticker (might change that later if it's a problem)
 
-### **ON** example
+### **ON** examples
 ```sh
 autotp ON tp1
 or
 atp ON tp1
 ```
 This will activate the autotp system with the shortcut `tp1` as limit order config  
-It means, if we enter a position on any coin, the bot will execute this shortcut `"tp1" : scale 10 0.1 to 0.2 `   
+It means, if we enter a position on any coin, the bot will execute this shortcut `"tp1" : scale 10 0.1 to 0.2 ` 
 
-It will automatically set 10 limit orders from 0.1 to 0.2 each time you enter a position
+- It will cancel the limit orders active for this coin (if any)  
+- It will automatically set 10 limit orders from 0.1 to 0.2 each time you enter a position
 
 *Note : Obviously, only use `scale` or `tp` shortcuts*
+```sh
+atp ON tp1 cancel_off
+```
+This will activate the autotp system with the shortcut `tp1` as limit order config, with the `cancel_off` options.  
+
+It means, if we enter a position on any coin, the bot will execute this shortcut `"tp1" : scale 10 0.1 to 0.2 `
+
+- It will **NOT** cancel the limit orders active for this coin  
+- It will automatically set 10 limit orders from 0.1 to 0.2 each time you enter a position
 
 ### **UPDATE** example
 ```sh
 autotp UPDATE tp4 
 or
 atp UP tp4
+or 
+atp UP tp4 cancel_off
 ```
 This will update the shortcut used by the `autotp` cmd to the shortcut called `tp4`
 

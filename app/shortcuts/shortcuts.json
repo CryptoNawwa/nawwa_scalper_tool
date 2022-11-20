@@ -3,7 +3,7 @@
     "tp2": "scale 3 0.1 0.2",
     "tp3": "scale 4 0.2 0.3",
     "tp4": "scale 2 0.1 0.2",
-    "tp5": "scale 3 0.1 0.15",
+    "tp5": "tp 0.3",
     "tp6": "scale 10 0.2 0.2",
     "cc": "cancel all",
     "atp4": "atp ON tp4",

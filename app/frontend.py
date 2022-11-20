@@ -7,7 +7,8 @@ from textual_inputs import TextInput
 from rich.text import Text
 from textual import events
 from ck_widgets.widgets import ListViewUo
-from textual.widget import Widget, Reactive
+from textual.widget import Widget
+from textual.reactive import Reactive
 from rich.console import RenderableType
 from rich.align import Align
 
@@ -55,8 +56,10 @@ class Frontend(App):
 
         # Chekc if client inherit Exchange
         is_instance = issubclass(type(exchange_client), Exchange)
-        self.client: Exchange | None = exchange_client if is_instance else None
+        if (is_instance == False):
+            raise Exception("Exchange is not type of Exchange")
 
+        self.client: Exchange = exchange_client
         self.display_title = 'Nawwa\'s Scalping Tool'
 
     show_shortcuts_bar = Reactive(False)
@@ -107,10 +110,12 @@ class Frontend(App):
         if not self.show_shortcuts_bar: False
         self.show_shortcuts_bar = not self.show_shortcuts_bar
 
-    def _change_terminal_title(self, ticker: str | None, price: str | None, positions: Position | None) -> None:
+    def _change_terminal_title(self, ticker: str | None, price: str | None, positions: Position | None, auto_tp_on : bool) -> None:
         """ Change the terminal title based on arg and refresh screen if necessary  """
         previous_title = self.terminal_cmd.title
 
+
+        atp_text = "[ATP ON]" if auto_tp_on else "[ATP OFF]"
         final_title = "Terminal [white]-[/white] "
         ticker_text = f"[gold1]{ticker}[/gold1] [white]-[/white]"
         price_text = f"[gold1]${price}[/gold1]"
@@ -127,6 +132,7 @@ class Frontend(App):
         else:
             final_title = DEFAULT_TERM_TITLE
 
+        final_title += f" - [white]{atp_text}[/white]"
         self.terminal_cmd.title = final_title
         if self.terminal_cmd.title != previous_title:
             self.terminal_cmd.refresh()
@@ -136,13 +142,14 @@ class Frontend(App):
         latest_symbol_info = self.client.get_latest_price_info_for_active_symbol()
         # If no ticker info, reset text input and return
         if not latest_symbol_info:
-            self._change_terminal_title(None, None, None)
+            self._change_terminal_title(None, None, None, False)
             return
 
         # Get symbol basic info
         symbol_info = latest_symbol_info
         symbol = symbol_info.get('symbol')
         last_price = str(symbol_info.get('last_price'))
+        auto_tp_used = True if self.client.auto_tp_data is not None else False
 
         try:
             # Get position data (if any)
@@ -151,9 +158,9 @@ class Frontend(App):
                                           if pos.get("symbol") == symbol), None)
 
             # Changer terminal title based on data
-            self._change_terminal_title(symbol, last_price, current_position_data)
+            self._change_terminal_title(symbol, last_price, current_position_data, auto_tp_used)
         except Exception as e:
-            self._change_terminal_title(symbol, last_price, None)
+            self._change_terminal_title(symbol, last_price, None, auto_tp_used)
 
     def _interval_check_bybit_updates(self):
         """ Look in bybit class if we got some new data to print """
@@ -164,7 +171,7 @@ class Frontend(App):
 
         debug_log = self.client.get_error_log(True)
         # Print client debug array in file
-        if len(debug_log) > 0:
+        if debug_log is not None and len(debug_log) > 0:
             for x in debug_log:
                 self.log(x)
 
@@ -206,7 +213,7 @@ class Frontend(App):
         # Build text
         time = datetime.now().strftime("%H:%M:%S")
         actual_result = result if result else "Command not found"
-        text = Text.assemble("> ", (cmd, "bold magenta"), " -> ", (actual_result, "blue"), " - ", (time),
+        text = Text.assemble((time), ": ", (cmd, "bold magenta"), " -> ", (actual_result, "blue"),
                              no_wrap=True, justify="left")
 
         # Add to screen
@@ -294,12 +301,16 @@ class Frontend(App):
 
             is_single_tp_shortcut = atp_command_list[0] == 'tp'
             is_scale_tp_shortcut = atp_command_list[0] == "scale" or atp_command_list[0] == "s"
+            user_input_should_cancel_order = True
+
+            try:
+                user_input_should_cancel_order = False if cmd_list[3] == "cancel_off" else True
+            except IndexError:
+                pass
 
             # ensure the shortcut is a scale or tp shortcut
             if is_single_tp_shortcut is False and is_scale_tp_shortcut is False:
-                raise ValueError(f"Wrong shortcut, please only set scale or tp shortcut for atp command")
-        
-
+                raise ValueError(f"Wrong shortcut, please only set scale or tp shortcut for atp command") 
           
             if is_scale_tp_shortcut:
                 # extract data from shortcut
@@ -309,12 +320,14 @@ class Frontend(App):
                     "number_of_order": 0,
                     "scale_from": 0.0,
                     "scale_to": 0.0,
+                    "auto_cancel_orders": True
                 })
 
                 # Set data into bybit client
                 auto_take_profit_scale_data["number_of_orders"] = number_of_orders
                 auto_take_profit_scale_data["scale_from"] = scale_from
                 auto_take_profit_scale_data["scale_to"] = scale_to
+                auto_take_profit_scale_data["auto_cancel_orders"] = user_input_should_cancel_order
 
                 self.client.auto_tp_data = auto_take_profit_scale_data
 
@@ -324,17 +337,19 @@ class Frontend(App):
 
                 auto_take_profit_single_tp_data = cast(AutoTakeProfitSingleTpData, {
                     "percent_away": 0.0,
+                    "auto_cancel_orders": True
                 })
                 auto_take_profit_single_tp_data["percent_away"] = percent_away
+                auto_take_profit_single_tp_data["auto_cancel_orders"] = user_input_should_cancel_order
 
                 self.client.auto_tp_data = auto_take_profit_single_tp_data
 
             if user_input_atp_action == "ON":
                 await self.add_text_to_history_list(raw_cmd,
-                  f"Auto take profit is now [{user_input_atp_action}] with shortcut {user_input_shortcut}")
+                    f"Auto take profit is now [{user_input_atp_action}] with shortcut {user_input_shortcut} and cancel_orders {user_input_should_cancel_order}")
             elif user_input_atp_action == "UPDATE" or user_input_atp_action == "UP":
                 await self.add_text_to_history_list(raw_cmd,
-                    f"Auto take profit was updated to use shortcut {user_input_shortcut}")
+                    f"Auto take profit was updated to use shortcut {user_input_shortcut} and cancel_orders {user_input_should_cancel_order}")
         except Exception as e:
             self.log(f'Error in cmd_auto_tp : {str(e)}')
             await self.add_text_to_history_list(raw_cmd, str(e))
