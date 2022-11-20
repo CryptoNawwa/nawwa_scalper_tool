@@ -29,7 +29,7 @@ class Bybit(Exchange):
         self.active_symbol_info: SymbolsInfo | None = None
         self.active_symbol_latest_price: SymbolPriceInfo | None = None
 
-        self.current_active_positions: list[Position] | None = None
+        self.current_active_positions: list[Position] = []
         self.symbols: list[dict] | None = None
         
         self.already_subscribed_symbol_price: list[str] = []
@@ -86,7 +86,7 @@ class Bybit(Exchange):
     def _send_limit_orders(self, orders: list[ScaleOrder]) -> Tuple[bool, str]:
         """ Will call API and send scale orders """
         for order in orders:
-            self.http_client.place_active_order(
+            ret = self.http_client.place_active_order(
                 symbol=order.get("symbol"),
                 side=order.get("side"),
                 order_type=order.get("order_type"),
@@ -133,11 +133,13 @@ class Bybit(Exchange):
             if (ticker is None) or (ticker_info is None) or (self.auto_tp_data is None):
                 raise ValueError(f"Missing data to create autotp for {ticker}")
 
-            try:
-                # cancel active orders before place tp orders
-                self.http_client.cancel_all_active_orders(symbol=ticker)
-            except Exception as z:
-                self.debug_log.append("No active orders to cancel")
+
+            if self.auto_tp_data.get('auto_cancel_orders') == True:
+                try:
+                    # cancel active orders before place tp orders
+                    self.http_client.cancel_all_active_orders(symbol=ticker)
+                except Exception as z:
+                    self.debug_log.append("No active orders to cancel")
 
             # build & send orders based auto_tp_data type
             success, msg = self._send_limit_orders(self._get_auto_tp_orders(new_position, ticker_info))

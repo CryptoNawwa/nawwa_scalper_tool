@@ -18,7 +18,7 @@ class Exchange(ABC):
         return self._auto_tp_data
 
     @auto_tp_data.setter
-    def auto_tp_data(self, value: AutoTakeProfitScaleData | AutoTakeProfitSingleTpData):
+    def auto_tp_data(self, value: AutoTakeProfitScaleData | AutoTakeProfitSingleTpData | None ):
         self._auto_tp_data = value
 
     @auto_tp_data.deleter
@@ -38,7 +38,7 @@ class Exchange(ABC):
         ...
 
     @abstractmethod
-    def get_current_positions(self) -> list[Position] | None:
+    def get_current_positions(self) -> list[Position]:
         """ Get current active position """
         ...
 
