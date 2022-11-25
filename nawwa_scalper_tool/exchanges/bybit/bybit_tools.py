@@ -1,14 +1,25 @@
 import math
-from exchange.positions_info import Position
-from exchange.symbols_info import Symbol
-from typing import Literal, TypedDict, cast
+from abstract.positions_info import Position
+from abstract.symbols_info import Symbol
+from typing import Literal, TypedDict
+
+class PositionStreamData(TypedDict):
+    topic: str
+    action: str
+    data: list[Position]
+
+class HttpResult(TypedDict):
+    ret_code: int
+    ext_code: str
+    ret_msg: str
+    result: list[Position]
 
 
 class ScaleOrder(TypedDict):
     symbol: str
     side: Literal["Buy", "Sell"]
     order_type: str
-    qty: int
+    qty: float
     price: float
     time_in_force: str
     reduce_only: bool
@@ -16,27 +27,25 @@ class ScaleOrder(TypedDict):
     position_idx: int
 
 
-def filter_postion_with_zero_size(raw_postion: dict):
-    raw_position_data = cast(list[Position], raw_postion)
-    return list(filter(lambda position: position.get("size") > 0.0, raw_position_data))
+def filter_postion_with_zero_size(raw_postion: list[Position]):
+    return list(filter(lambda position: position.get("size") > 0.0, raw_postion))
 
 
-def ensure_http_result(http_result: dict) -> dict:
+def ensure_http_result(http_result: HttpResult) -> HttpResult:
     """ Take HTTP response and throw appropriate error """
     # ret_code=0 and ext_code="" means create order success
     # ret_code=0 and ext_code!="" means create order success but some parameters were not set correctly
     # ret_code !=0 means create order fail
     # ext_code means please refer to Errors
 
-    dict_http_result = dict(http_result)
-    ret_code = int(dict_http_result.get("ret_code"))
-    ext_code = dict_http_result.get("ext_code")
+    ret_code = http_result.get("ret_code")
+    ext_code = http_result.get("ext_code")
 
     if ret_code == 0 and ext_code != "":
         raise Exception(f"Wrong parameters, code :{ext_code}")
     if ret_code != 0:
         raise Exception(f"Bybit API error {ret_code} - {ext_code}")
-    return dict_http_result
+    return http_result
 
 
 def remove_space_and_split(string: str) -> list[str]:
@@ -47,7 +56,7 @@ def round_to_tick(value: float, tick_size: float) -> float:
     return math.ceil(value / tick_size) * tick_size
 
 
-def _get_current_position_data(current_positions: list[Position] | None, ticker_info: Symbol):
+def _get_current_position_data(current_positions: list[Position], ticker_info: Symbol):
     return next((pos for pos in current_positions
                                   if pos["symbol"] == ticker_info["name"] and pos["size"] > 0.0), None)
 
@@ -63,7 +72,7 @@ def build_single_tp_order(
         percent_away: float) -> ScaleOrder:
     
     _guard_ticker_and_position_info(current_positions, ticker_info)
-    current_position_data = _get_current_position_data(current_positions, ticker_info)
+    current_position_data = _get_current_position_data(current_positions, ticker_info)  # type: ignore - cannot be null thanks to guard
     
     if current_position_data is None:
         raise ValueError("No current position found")
@@ -114,7 +123,7 @@ def build_scale_orders(
     _guard_ticker_and_position_info(current_positions, ticker_info)
        
     # Get current position data #
-    current_position_data = _get_current_position_data(current_positions, ticker_info)
+    current_position_data = _get_current_position_data(current_positions, ticker_info)  # type: ignore cannot be null thanks to safeguard
     
     if current_position_data is None:
         raise ValueError("No current position found")
@@ -154,7 +163,7 @@ def build_scale_orders(
     
     # Create scale order array
     i = 0
-    orders: list[dict] = []
+    orders: list[ScaleOrder] = []
     while i < number_of_orders:
         orders.append({
             "symbol": ticker_info["name"],

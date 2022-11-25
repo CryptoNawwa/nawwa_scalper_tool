@@ -1,36 +1,35 @@
 import os
 
-from bybit.bybit_tools import filter_postion_with_zero_size
-from bybit.bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder, build_single_tp_order, filter_postion_with_zero_size
-from config import Configuration
-from exchange.symbols_info import SymbolsInfo, Symbol
-from exchange.single_tp_order_data import SingleTpOrder
-from exchange.symbol_price_info import SymbolPriceInfo
-from exchange.positions_info import Position
-from exchange.scale_order_data import ScaleOrdersData
-from exchange.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
-from exchange.exchange import Exchange
+from .bybit_tools import PositionStreamData, filter_postion_with_zero_size
+from .bybit_tools import ensure_http_result, build_scale_orders, ScaleOrder, build_single_tp_order, filter_postion_with_zero_size
+from json_loader import JSON_CONFIG
+from abstract.symbols_info import Symbol
+from abstract.single_tp_order_data import SingleTpOrder
+from abstract.symbol_price_info import SymbolPriceInfo
+from abstract.positions_info import Position
+from abstract.scale_order_data import ScaleOrdersData
+from abstract.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
+from abstract.exchange import Exchange
 from typing import Tuple, cast
 
 from pybit import usdt_perpetual
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'data/conf.json')
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'api_keys.json')
 SUCCESS_RETURN = "OK"
 
 
 class Bybit(Exchange):
     def __init__(self) -> None:
         super().__init__()
-        self.config = Configuration(CONFIG_PATH)
+        self.config = JSON_CONFIG(CONFIG_PATH)
         self.endpoint = "https://api.bybit.com"
 
         # Init class var #
         self.active_symbol_name: str | None = None
-        self.active_symbol_info: SymbolsInfo | None = None
         self.active_symbol_latest_price: SymbolPriceInfo | None = None
 
         self.current_active_positions: list[Position] = []
-        self.symbols: list[dict] | None = None
+        self.symbols: list[Symbol] = []
         
         self.already_subscribed_symbol_price: list[str] = []
 
@@ -48,7 +47,7 @@ class Bybit(Exchange):
 
     # Private methods #
     def _create_ws_auth(self) -> None:
-        if self.config.data.BybitApiKey == "" or self.config.data.BybitSecretApiSecret == "":
+        if self.config.data.BybitApiKey is None or self.config.data.BybitSecretApiSecret is None:
             raise ValueError("Missing Bybit api keys or secrets in conf.json file")
         self.websocket_auth_client = usdt_perpetual.WebSocket(
             test=False,
@@ -68,14 +67,14 @@ class Bybit(Exchange):
             api_secret=self.config.data.BybitSecretApiSecret)
 
     def _load_bybit_symbol(self) -> None:
-        self.symbols = dict(self.http_client.query_symbol()).get("result")
+        self.symbols = cast(list[Symbol], (self.http_client.query_symbol()).get("result"))
     
     def _get_current_position_for_symbol(self, new_symbol : str) -> None:
         """ Will call API get current position for this symbol """
         try:
-            data = ensure_http_result(self.http_client.my_position(symbol=new_symbol))
+            position_data = ensure_http_result(self.http_client.my_position(symbol=new_symbol))
 
-            open_position_list = filter_postion_with_zero_size(data.get("result"))
+            open_position_list = filter_postion_with_zero_size(position_data.get("result"))
 
             self.current_active_positions = open_position_list if open_position_list else []
 
@@ -100,25 +99,25 @@ class Bybit(Exchange):
         return True, SUCCESS_RETURN
 
 
-    def _get_auto_tp_orders(self, new_position: Position, ticker_info: dict) -> list[ScaleOrder]:
-        ticker_info = cast(Symbol, ticker_info)
-        
-        # scale orders - ugly bcs python does not have type checking on class lol
-        if self.auto_tp_data.get("number_of_orders") is not None:
+    def _get_auto_tp_orders(self, new_position: Position, ticker_info: Symbol, 
+                            auto_tp_data: AutoTakeProfitScaleData | AutoTakeProfitSingleTpData) -> list[ScaleOrder]:
+                
+        # ugly check bcs python does not have type checking on dict
+        # scale orders - 
+        if auto_tp_data.get("number_of_orders") is not None:
             return build_scale_orders(
                 [new_position],
                 ticker_info,
-                self.auto_tp_data.get("number_of_orders"),
-                self.auto_tp_data.get("scale_from"),
-                self.auto_tp_data.get("scale_to"))
+                auto_tp_data.get("number_of_orders"),  # type: ignore
+                auto_tp_data.get("scale_from"), # type: ignore
+                auto_tp_data.get("scale_to")) # type: ignore
 
         # single tp order
-        elif self.auto_tp_data.get("percent_away") is not None:
-            self.debug_log.append(self.auto_tp_data.get("percent_away"))
+        elif auto_tp_data.get("percent_away") is not None:
             return [build_single_tp_order(
                 [new_position],
                 ticker_info,
-                self.auto_tp_data.get("percent_away"))]
+                auto_tp_data.get("percent_away"))] # type: ignore
       
         raise ValueError(f"Wrong auto_tp_data_type, should never happend")
 
@@ -142,7 +141,7 @@ class Bybit(Exchange):
                     self.debug_log.append("No active orders to cancel")
 
             # build & send orders based auto_tp_data type
-            success, msg = self._send_limit_orders(self._get_auto_tp_orders(new_position, ticker_info))
+            success, msg = self._send_limit_orders(self._get_auto_tp_orders(new_position, ticker_info, self.auto_tp_data))
 
             if success is False:
                 raise Exception(msg)
@@ -171,8 +170,12 @@ class Bybit(Exchange):
         for new_pos in new_positions_as_list:
             self._do_auto_tp_system(new_pos[1])
 
-    def _callback_listen_to_position(self, exchange_msg: dict | None) -> None:
+    def _callback_listen_to_position(self, exchange_msg: PositionStreamData | None) -> None:
         """ Called everytime we get into a position """
+        
+        if (exchange_msg is None):
+            self.debug_log.append("_callback_listen_to_position -> none exchange_msg")
+            return
 
         new_positions_from_websocket = exchange_msg.get("data")
 
@@ -240,9 +243,7 @@ class Bybit(Exchange):
             if symbol_info is None:
                 raise ValueError(f"Symbol {new_symbol} not supported by Bybit")
 
-            # Set new symbol & symbol data
             self.active_symbol_name = new_symbol
-            self.active_symbol_info = symbol_info
 
             # Load current position for this symbol
             self._get_current_position_for_symbol(new_symbol)

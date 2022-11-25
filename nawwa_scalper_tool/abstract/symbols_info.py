@@ -22,14 +22,3 @@ class Symbol(TypedDict):
     price_filter: PriceFilter
     lot_size_filter: LotSizeFilter
 
-
-class SymbolsInfo(TypedDict):
-    # ret_code=0 and ext_code="" means  success
-    # ret_code=0 and ext_code!="" means success but some parameters were not set correctly
-    # ret_code !=0 means fail
-    # ret_msg str message 
-    # ext_code means error code (not really used kekLmao)
-    ret_code: int
-    ret_msg: str
-    ext_code: str
-    result: List[Symbol]

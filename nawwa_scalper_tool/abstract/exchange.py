@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 
 from typing import Tuple, cast
 
-from exchange.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
-from exchange.scale_order_data import ScaleOrdersData
-from exchange.positions_info import Position
-from exchange.symbol_price_info import SymbolPriceInfo
-from exchange.single_tp_order_data import SingleTpOrder
+from abstract.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
+from abstract.scale_order_data import ScaleOrdersData
+from abstract.positions_info import Position
+from abstract.symbol_price_info import SymbolPriceInfo
+from abstract.single_tp_order_data import SingleTpOrder
 
 
 class Exchange(ABC):

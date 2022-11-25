@@ -1,50 +1,31 @@
 import os
+import sys
 
 from textual.app import App
-from rich.panel import Panel
 from textual.widgets import Header, Footer
 from textual_inputs import TextInput
-from rich.text import Text
 from textual import events
-from ck_widgets.widgets import ListViewUo
-from textual.widget import Widget
 from textual.reactive import Reactive
-from rich.console import RenderableType
-from rich.align import Align
 
-from bybit.bybit import Bybit
-from exchange.exchange import Exchange
-from exchange.positions_info import Position
-from exchange.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
-from frontend_tools import remove_space_and_split
-from config import Configuration
+from ck_widgets.widgets import ListViewUo
+
+from rich.text import Text
+
+from utils import ShortCutSideBar, remove_space_and_split
+from json_loader import JSON_CONFIG
+
+from exchanges import Bybit
+from exchanges import Binance
+
+from abstract.exchange import Exchange
+from abstract.positions_info import Position
+from abstract.auto_take_profit_data import AutoTakeProfitScaleData, AutoTakeProfitSingleTpData
 
 from datetime import datetime
 from typing import List, Tuple, cast
 
 SHORTCUT_PATH = os.path.join(os.path.dirname(__file__), 'shortcuts/shortcuts.json')
-DEFAULT_TERM_TITLE = "Terminal [white]-[/white] [No ticker selected]"
 SHORTCUTS_SIDEBAR_SIZE = 80
-
-
-class ShortCutSideBar(Widget):
-    """Display shortcuts sidebar """
-
-    def __init__(self, *, name: str | None = None, shortcut_cfg: Configuration, height: int | None = None) -> None:
-        super().__init__(name=name)
-        self.shortcuts_cfg = shortcut_cfg
-        self.log(str(self.shortcuts_cfg.data))
-
-    def render(self) -> RenderableType:
-        self.shortcuts = ""
-        for f in self.shortcuts_cfg.data:
-            self.shortcuts += f"[bold magenta]{str(f)}[/] --> [blue]{self.shortcuts_cfg.data[f]}[/]\n"
-
-        return Panel(
-            Align.left(self.shortcuts),
-            title=f"[bold blue]Shortcuts[/]",
-            border_style="blue",
-        )
 
 
 class Frontend(App):
@@ -52,16 +33,17 @@ class Frontend(App):
         super().__init__(*args, **kwargs)
 
         # Set shortcut cfg handler
-        self.shortcuts_cfg = Configuration(SHORTCUT_PATH, live=True)
+        self.shortcuts_cfg = JSON_CONFIG(SHORTCUT_PATH, live=True)
 
-        # Chekc if client inherit Exchange
+        # Check if client inherit Exchange
         is_instance = issubclass(type(exchange_client), Exchange)
         if (is_instance == False):
-            raise Exception("Exchange is not type of Exchange")
+            raise Exception("Exchange is not type of Exchange()")
 
         self.client: Exchange = exchange_client
         self.display_title = 'Nawwa\'s Scalping Tool'
-
+        self.exchange_name = exchange_client.__class__.__name__
+        
     show_shortcuts_bar = Reactive(False)
 
     async def on_load(self, event: events.Load) -> None:
@@ -79,7 +61,7 @@ class Frontend(App):
         # Setup widgets
         self.terminal_cmd = TextInput(
             name="cmd",
-            title=DEFAULT_TERM_TITLE,
+            title=self._get_default_title(),
             placeholder="> "
         )
         self.history_view = ListViewUo([])
@@ -96,9 +78,13 @@ class Frontend(App):
         await self.view.dock(self.shortcuts_sidebar, edge="left", size=SHORTCUTS_SIDEBAR_SIZE, z=1)
 
         # Fetch ticker data to update terminal UI
-        self.set_interval(1, self._interval_check_bybit_updates)
+        self.set_interval(1, self._interval_check_exchange_updates)
         self.refresh()
 
+
+    def _get_default_title(self) -> str:
+        return f"[red]{self.exchange_name}[/red] [white]-[/white] [No ticker selected]"
+    
     def watch_show_shortcuts_bar(self, show_shortcuts_bar: bool) -> None:
         """Show/hide shortcuts sidebar"""
 
@@ -107,7 +93,6 @@ class Frontend(App):
     def action_toggle_shortcuts_sidebar(self) -> None:
         """Trigger show/hide mirror sidebar"""
 
-        if not self.show_shortcuts_bar: False
         self.show_shortcuts_bar = not self.show_shortcuts_bar
 
     def _change_terminal_title(self, ticker: str | None, price: str | None, positions: Position | None, auto_tp_on : bool) -> None:
@@ -116,7 +101,7 @@ class Frontend(App):
 
 
         atp_text = "[ATP ON]" if auto_tp_on else "[ATP OFF]"
-        final_title = "Terminal [white]-[/white] "
+        final_title = f"[red]{self.exchange_name}[/red] [white]-[/white] "
         ticker_text = f"[gold1]{ticker}[/gold1] [white]-[/white]"
         price_text = f"[gold1]${price}[/gold1]"
         if price and ticker and positions:
@@ -130,7 +115,7 @@ class Frontend(App):
         elif ticker and not price and not positions:
             final_title += f"{ticker_text}"
         else:
-            final_title = DEFAULT_TERM_TITLE
+            final_title = self._get_default_title()
 
         final_title += f" - [white]{atp_text}[/white]"
         self.terminal_cmd.title = final_title
@@ -162,10 +147,10 @@ class Frontend(App):
         except Exception as e:
             self._change_terminal_title(symbol, last_price, None, auto_tp_used)
 
-    def _interval_check_bybit_updates(self):
-        """ Look in bybit class if we got some new data to print """
+    def _interval_check_exchange_updates(self):
+        """ Look in exchange class if we got some new data to print """
 
-        # If no bybit client, return
+        # If no exchange client, return
         if not self.client:
             return
 
@@ -217,7 +202,7 @@ class Frontend(App):
                              no_wrap=True, justify="left")
 
         # Add to screen
-        await self.history_view.add_widget(text, index=0)
+        await self.history_view.add_widget(text, index=0)  # type: ignore
 
     async def cmd_select_ticker(self, raw_cmd, cmd_list: List[str]) -> None:
         """ Ticker command ie ticker ethusdt"""
@@ -469,8 +454,24 @@ class Frontend(App):
             self.terminal_cmd.refresh()
 
 
+def parse_args(argv: list[str]) -> Bybit | Binance | None: 
+    if (len(argv) == 1):
+        return None
+    
+    match str.upper(argv[1]):
+        case 'BYBIT':
+            return Bybit()
+        case 'BINANCE':
+            return Binance()
+        
+    return None
+
 def main():
-    Frontend.run(exchange_client=Bybit(), title="Nawwa's Scalping Tool", log="scalping_tool.log")
+    exchange = parse_args(sys.argv)
+    if (exchange is None):
+        print("usage: python3 nawwa_scalper_tool/app.py <exchange_name>")
+        return 
+    Frontend.run(exchange_client=exchange, title="Nawwa's Scalping Tool", log="scalper_log.log")
 
 
 if __name__ == '__main__':
