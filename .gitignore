@@ -3,7 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 .vscode/
-
+.idea
+nawwa_scalper_tool/nawwa_scalper_tool/exchanges/bybit/api_keys.json
+api_keys.json
 # C extensions
 *.so
 
