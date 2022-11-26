@@ -8,96 +8,118 @@ This `tool` was made because our friend [Ichibot](https://gitlab.com/Ichimikichi
 The current version of the NawwaBot only support the **Bybit** exchange but the code was made in a way that's easy for any developer to implement a new exchange
 # Demo
 
-Smol demo 
-[![asciicast](https://asciinema.org/a/gXh5ocBOkqe3e5L5JvR59bdUn.svg)](https://asciinema.org/a/gXh5ocBOkqe3e5L5JvR59bdUn)
+auto take profit  
+
+![demo2](./img/ATP-command.gif)
+
+cancel and create orders  
+
+![demo1](./img/gif_scale_cancel.gif)
+
+launch auto take profit  
+
+![demo2](./img/gif_ticker_atp.gif)
+
 
 # How to update
 
-If you already have a version of this bot running you just have to download the new source code.
+Just double click on the script file called `update.sh` located in `/bin/`.
 
-It will download a folder on your computer, just navigate to the folder and run the bot like you are use to.    
+This will download the new source code and create another folder located next to this one, it will also automatically copy your shortcuts and your api keys into this new folder.
 
-You just have to keep 2 files :  
+To run the bot, go into the new folder and type the start command :
 
-- shortcut.json (where you store your aliases and shortcuts)
-- conf.json (where you store your api keys)
+  ```bash
+    python3 ./terminal/app.py bybit 
+  ```
 
-
----
-
-Keep your current bot folder just in case the new version is not working for you so you can still go back and use the bot located in your current folder.
-
-
-Shoot me a message on discord if you have any problem <3
 
 # How to install
 
-**MacOS / LINUX**  
+
+### **Terminal choice**
+- **MacOS / LINUX**  
 Use any terminal you want
 
-**Windows**  
-Because it's a graphic UI, you will need to use a specific terminal called [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701?hl=fr-fr&gl=fr). It's a terminal developed by microsoft and you can install it using the microsoft store. Do that first.
+- **Windows**  
+Because the tool has a graphic UI, you will have need to use a specific terminal called [Windows Terminal](https://apps.microsoft.com/store/detail/windows-terminal/9N0DX20HK701?hl=fr-fr&gl=fr) to make it work. 
 
-### Installation guide 
-Install this  :
+  It's a terminal developed by microsoft and you can install it using the microsoft store. Do that first.  
 
-- [Python 3.10](https://www.python.org/downloads/release/python-3105/) (Scroll at bottom & download)
+  
+<br />
+
+### **Installing**
+
+\
+Before going through this, please have your **Bybit API key** and **API secret** ready.  
 
 
-You are ready, follow the steps :
+\
+1 - Install Python  :
 
-Download the project using this link, then unzip it
+- [Python 3.10](https://www.python.org/downloads/release/python-3105/) (Click link, scroll at bottom & download)
+
+
+
+
+2 - Download the source code of the **scalping tool** by clicking on this  [link](https://github.com/CryptoNawwa/nawwa_scalper_tool/archive/refs/heads/main.zip) , then unzip it.  
+
+
+
+3 - Navigate to the `bin` folder, located under `nawwa_scalper_tool-main/bin`  
+
+4 - Double click  on  `first_setup_window.sh` 
+
+5 - It should open a terminal and ask you to enter your api keys and secret  
+
+6 - At the end it should prompt `Installation was successful !`  
+
+7 - Press `enter` to quit the installation windows  
+
+<br />
+
+Congratulation, you should now be able to run the scaling tool now :) 
+
+<br />
+
+
+### **How to run the sclaping tool**  
+<br />
+
+1 - Open your terminal and navigate to the project directory
+
+  Pro tip, you can right click on an empty space in your folder and click on `Open in terminal`  
+
+  It will open a `terminal` at the right place to run the bot
+  
+![demo1](./img/tips_winopenterm.png)
+
+ or you can also navigate manually :
 
 ```bash
-  https://github.com/CryptoNawwa/nawwa_scalper_tool/archive/refs/heads/main.zip
+  cd your/own/path/nawwa_scalper_tool-main
 ```
 
-Open your terminal and navigate to the project directory
+2 - Once you are in the scalping tool folder, you can run :  
 
-```bash
-  cd nawwa_scalper_tool
-```
+- For bybit  
 
-Install dependencies
+  ```bash
+    python3 ./terminal/app.py bybit 
+  ```
 
-```bash
-  pip3 install textual~=0.1.18
-  pip3 install textual-inputs~=0.2.6
-  pip3 install ck-widgets==0.2.0
-  pip3 install pybit~=2.4.0
-  pip3 install install rich~=12.5.1
-```
 
-Go into app folder
-
-```bash
-  cd app
-```
-
-Open the `bybit/data/conf.json` file using any text editor and copy past your apy keys so it look like this :  
-```json
-{
-    "BybitApiKey": "my_apy_key_here",
-    "BybitSecretApiSecret": "my_secret_api_here"
-}
-```
-
-If you are inside the `App` folder,  Run the bot using this command :
-
-```bash
-  python3 frontend.py
-```
-
-You are done, you can use the bot !
 
 
 # Features
 
 - Cool UI kekW
+- Bybit only (binance is comming)
 - Display current active ticker in terminal UI 
 - Display current position size in terminal UI
 - Place scale reduce-only limit orders based on .% range (only support reduce-only order atm)
-- Place only 1 (one) reduce only limit order, based on .% away from entry
+- Place 1 (one) reduce only limit order, based on .% away from entry
 - Automatic take-profit system, it will automatically place pre-configured scale orders when you enter any position
 - Cancel all orders
 - Create/Update/Delete your Shortcuts (shortcuts = alias for your commands)
@@ -357,7 +379,7 @@ Everything is typed with `TypedDict`, so as long as you return the correct data,
 
 # Support
 
-If you need any help, follow & dm me on twitter [crypto_nawwa](https://twitter.com/crypto_nawwa) or add me on Discord: Nawwa#8129
+If you need any help, follow & dm me on twitter [crypto_nawwa](https://twitter.com/crypto_nawwa) or add me on Discord **Nawwa#8129**
 
 # Disclaimer 
 

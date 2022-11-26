@@ -55,7 +55,6 @@ python3 setup.py install --user
 
 if [ $? -eq 0 ]; then
    echo "Installation was successful !"
-   echo "You can run scalp_bybit.sh to launch the terminal"
    echo "Press enter to quit !"
    read enter
    exit 0 
