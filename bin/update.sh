@@ -35,9 +35,9 @@ cp $prev_path_shortuts .
 
 sleep 0.2
 printf "\n"
-echo "Downloading source code.."
+echo "Downloading new source code.."
 ## get source code
-until curl -LJO "https://github.com/CryptoNawwa/nawwa_scalper_tool/archive/refs/heads/feature/create-proper-python-package.zip"
+until curl -LJO "https://github.com/CryptoNawwa/nawwa_scalper_tool/archive/refs/heads/main.zip"
 do
   sleep 5
 done
@@ -47,11 +47,11 @@ printf "\n"
 echo "Unziping source code..."
 sleep 0.5
 ## unzip source code
-unzip nawwa_scalper_tool-feature-create-proper-python-package
-rm nawwa_scalper_tool-feature-create-proper-python-package.zip
+unzip nawwa_scalper_tool-main
+rm nawwa_scalper_tool-main.zip
 
 ## rename new code
-mv nawwa_scalper_tool-feature-create-proper-python-package ${new_code_source_folder_name}
+mv nawwa_scalper_tool-main ${new_code_source_folder_name}
 
 sleep 0.2
 echo "Copying shortcuts and api keys into new source code..."

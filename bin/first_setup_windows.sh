@@ -47,11 +47,6 @@ echo '
 }' > $path_bybit_api_keys
 printf "Done\n\n" 
 
-sleep 0.2
-echo "Setting execution rights on scripts.."
-sleep 0.5
-chmod u+x $path_update
-printf "Done\n"
 
 sleep 0.2
 echo "Running python install command.."
