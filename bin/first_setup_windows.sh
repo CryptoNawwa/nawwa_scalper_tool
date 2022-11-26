@@ -17,7 +17,7 @@ sleep 0.5
 if [[ -z "$pyv" ]]
 then
     echo "Install failed" 
-    echo "You do not have python3 installed.." 
+    echo "You do not have python3 installed" 
     echo "Try to add python to the PATH of your terminal" 
     exit 0
 fi
@@ -25,8 +25,7 @@ fi
 if [[ -z "$pipv" ]]
 then
     echo "Install failed" 
-    echo "You do not have python3 installed.." 
-    echo "Try to add python to the PATH of your terminal" 
+    echo "You do not have pip3 installed" 
     exit 1
 fi
 printf "Done\n\n" 
