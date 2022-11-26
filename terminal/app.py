@@ -469,7 +469,7 @@ def parse_args(argv: list[str]) -> Bybit | Binance | None:
 def main():
     exchange = parse_args(sys.argv)
     if (exchange is None):
-        print("usage: python3 nawwa_scalper_tool/app.py <exchange_name>")
+        print("usage: python3 terminal/app.py <exchange_name>")
         return 
     Frontend.run(exchange_client=exchange, title="Nawwa's Scalping Tool", log="scalper_log.log")
 

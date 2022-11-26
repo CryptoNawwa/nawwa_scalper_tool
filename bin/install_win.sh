@@ -1,7 +1,7 @@
 #!/bin/bash
 
-path_bybit_api_keys_copy=nawwa_scalper_tool/exchanges/bybit/api_keys.json.copy
-path_bybit_api_keys=nawwa_scalper_tool/exchanges/bybit/api_keys.json
+path_bybit_api_keys_copy=terminal/exchanges/bybit/api_keys.json.copy
+path_bybit_api_keys=terminal/exchanges/bybit/api_keys.json
 
 path_scalp_bybit=bin/scalp_bybit.sh
 path_update=bin/update.sh
@@ -31,8 +31,8 @@ then
 fi
 printf "Done\n\n" 
 
-
 cd ..
+
 sleep 0.2
 echo "Enter Bybit API_KEY:"
 read bybit_api_key
@@ -50,26 +50,23 @@ printf "Done\n\n"
 sleep 0.2
 echo "Setting execution rights on scripts.."
 sleep 0.5
-chmod u+x $path_scalp_bybit
 chmod u+x $path_update
-ln -s $path_scalp_bybit shortcut_scalp_bybit
 printf "Done\n"
 
 sleep 0.2
 echo "Running python install command.."
 sleep 0.5
-python3 setup.py install 
-printf "\n\n"
+python3 setup.py install --user
 
 if [ $? -eq 0 ]; then
-   printf "Installation was successful !\n"
+   echo "Installation was successful !"
    echo "You can run scalp_bybit.sh to launch the terminal"
    echo "Press enter to quit !"
    read enter
    exit 0 
 else
-    printf "Installation failed :( \n"
-    printf "Take a screenshot and contact me on discord -> Nawwa#8129 \n"
+    echo "Installation failed :("
+    echo "Take a screenshot and contact me on discord -> Nawwa#8129 \n"
     echo "Press enter to quit !"
     read enter
     exit 1 
