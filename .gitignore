@@ -3,9 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 .vscode/
-
+.idea
+terminal/exchanges/bybit/api_keys.json
+api_keys.json
 # C extensions
 *.so
+.DS_Store
 
 # Distribution / packaging
 .Python

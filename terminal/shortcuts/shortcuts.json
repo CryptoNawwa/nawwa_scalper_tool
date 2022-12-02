@@ -1,0 +1,17 @@
+{
+    "tp1": "scale 4 0.1 0.2",
+    "tp2": "scale 3 0.1 0.2",
+    "tp3": "scale 4 0.2 0.3",
+    "tp4": "scale 2 0.1 0.2",
+    "tp5": "tp 0.3",
+    "tp6": "scale 10 0.2 0.2",
+    "cc": "cancel all",
+    "atp3": "atp ON tp3",
+    "atom": "t atomusdt",
+    "eth": "t ethusdt",
+    "etc": "t etcusdt",
+    "btc": "ticker btcusdt",
+    "eos": "ticker eosusdt",
+    "tp8": "scale 5 0.1 0.15",
+    "tp9": "scale 5 0.5 0.6"
+}
