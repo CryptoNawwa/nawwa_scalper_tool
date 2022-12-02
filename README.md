@@ -37,7 +37,7 @@ To run the bot, go into the new folder and just do as usual.
 
 # How to install
 
-### **Mandatory terminal installation** - 3min
+### **1 - Mandatory terminal installation** - 3min
 
 - **Install the Windows Terminal**  
   Because the bot has a graphic UI, you will have to use a specific terminal called **_Windows Terminal_** to make it work.
@@ -56,7 +56,7 @@ To run the bot, go into the new folder and just do as usual.
 
 <br />
 
-### **Source code install** - 10min
+### **2 - Source code install** - 10min
 
 Before going through this, please make sure you have your **Bybit API key** and **API secret** ready.
 
@@ -99,7 +99,7 @@ If nothing works, seek in the TickChartCartel discord for help, in the [Bybit Sc
 
 3 - Inside the source code, navigate to the `bin` folder, located under `nawwa_scalper_tool-main/bin`
 
-4 - You can see 3 folders, enter the one that match the python command you use
+4 - You can see multiple folders, enter the one that match the python command you use
 
 5 - Right click on the `install_first_time.sh`
 
@@ -107,11 +107,9 @@ If nothing works, seek in the TickChartCartel discord for help, in the [Bybit Sc
 - Scroll and click on `Chose another application`
 - Navigate to the previously installed **_gitbash folder_** and chose `gitbash` and click open
 
-5 - It should open a terminal and ask you to enter your api keys and secret
+5 - It should open a terminal and ask you to enter your `api keys` and `secret`, copy past them.
 
-6 - At the end it should prompt `Installation was successful !`
-
-7 - Press `enter` or `close the window` to quit
+6 - Press `enter` or `close the window` to quit
 
 <br />
 
