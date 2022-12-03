@@ -3,3 +3,7 @@ textual-inputs~=0.2.6
 ck-widgets==0.2.0
 pybit~=2.4.0
 rich~=12.5.1
+setuptools~=63.2.0
+unicorn-binance-rest-api~=1.5.0
+python-binance~=1.0.16
+unicorn-binance-websocket-api~=1.41.0
