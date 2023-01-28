@@ -1,4 +1,15 @@
-# Nawwa Scalper Tool
+# Nawwa Scalper Tool (deprecated)
+
+### ---- [DEPRECATED] ----  
+Not supported / developed anymore.  
+I re-writed everything in Node/Typescript because Python is .. well :)  
+
+#### NEW REPO  
+[https://github.com/CryptoNawwa/nawwa_scalper_terminal](https://github.com/CryptoNawwa/nawwa_scalper_terminal)
+### --- [DEPRECATED] ----  
+  
+    
+    
 
 This CLI is a textual UI (TUI) scalping tool, it's goal is to automate certain action when you are trading / scalping, aka : place scale orders, auto-limit order, cancel orders, shortcuts..
 
