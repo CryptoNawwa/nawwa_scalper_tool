@@ -1,4 +1,4 @@
-# Nawwa Scalper Tool (deprecated)
+# Nawwa Scalper Tool (deprecated) - New repo https://github.com/CryptoNawwa/nawwa_scalper_terminal
 
 ### ---- [DEPRECATED] ----  
 Not supported / developed anymore.  
